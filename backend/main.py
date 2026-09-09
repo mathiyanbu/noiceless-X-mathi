@@ -46,14 +46,28 @@ def create_app() -> FastAPI:
     # Register WebSocket Router
     app.include_router(telemetry_ws.router)
 
-    @app.get("/")
-    async def root():
-        return {
-            "name": settings.app_name,
-            "version": settings.app_version,
-            "docs": "/docs",
-            "status": "operational"
-        }
+    import os
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import FileResponse
+
+    dist_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend", "dist")
+    if os.path.isdir(dist_dir):
+        assets_dir = os.path.join(dist_dir, "assets")
+        if os.path.isdir(assets_dir):
+            app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+        @app.get("/", include_in_schema=False)
+        async def serve_index():
+            return FileResponse(os.path.join(dist_dir, "index.html"))
+    else:
+        @app.get("/")
+        async def root():
+            return {
+                "name": settings.app_name,
+                "version": settings.app_version,
+                "docs": "/docs",
+                "status": "operational"
+            }
 
     return app
 

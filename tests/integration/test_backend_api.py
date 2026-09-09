@@ -296,3 +296,12 @@ def test_websocket_reports_offline_when_runtime_unreachable(client):
         assert data["type"] == "telemetry_offline"
         assert data["status"] == "disconnected"
         assert "error" in data
+
+
+def test_root_serves_frontend_or_api_status(client):
+    """
+    Verifies that GET / responds with 200 (serving the React dashboard index.html when built,
+    or status operational).
+    """
+    res = client.get("/")
+    assert res.status_code == 200
