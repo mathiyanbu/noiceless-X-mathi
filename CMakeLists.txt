@@ -144,11 +144,33 @@ if(ENABLE_ONNXRUNTIME AND ONNXRUNTIME_LIB)
     target_include_directories(noiselessx_core INTERFACE ${ONNXRUNTIME_INCLUDE_DIR})
 endif()
 
+# AI Inference Subsystem Library (SpeechEnhancer ONNX Runtime C++ Engine)
+set(AI_SOURCES
+    embedded/ai/onnx_engine.cpp
+)
+
+add_library(noiselessx_ai STATIC ${AI_SOURCES})
+target_include_directories(noiselessx_ai PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/embedded
+    ${CMAKE_CURRENT_SOURCE_DIR}/embedded/ai
+    ${CMAKE_CURRENT_SOURCE_DIR}/embedded/dsp
+)
+target_link_libraries(noiselessx_ai PUBLIC noiselessx_core noiselessx_dsp)
+
+if(ENABLE_ONNXRUNTIME AND ONNXRUNTIME_LIB)
+    target_link_libraries(noiselessx_ai PUBLIC ${ONNXRUNTIME_LIB})
+    target_include_directories(noiselessx_ai PUBLIC ${ONNXRUNTIME_INCLUDE_DIR})
+endif()
+
 # Hardware Test Utility (built when ALSA is enabled or on Linux target)
 if(ENABLE_ALSA)
     add_executable(audio_test tools/audio_test.cpp)
     target_link_libraries(audio_test PRIVATE noiselessx_audio noiselessx_dsp noiselessx_core)
 endif()
+
+# Standalone Latency Benchmark Utility (Target: Raspberry Pi 4/5 ARM NEON)
+add_executable(benchmark tools/benchmark.cpp)
+target_link_libraries(benchmark PRIVATE noiselessx_ai noiselessx_dsp noiselessx_core)
 
 # Testing Scaffolding with GoogleTest
 if(BUILD_TESTS)
@@ -163,18 +185,20 @@ if(BUILD_TESTS)
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
 
-    # Unit test executable covering lock-free ring buffers, drift detection, and DSP pipeline
+    # Unit test executable covering lock-free ring buffers, drift detection, DSP pipeline, and AI inference engine
     add_executable(noiselessx_unit_tests
         tests/unit/test_sanity.cpp
         tests/unit/test_ring_buffer.cpp
         tests/unit/test_drift_detector.cpp
         tests/unit/test_dsp.cpp
         tests/unit/test_nlms.cpp
+        tests/unit/test_speech_enhancer.cpp
     )
 
     target_link_libraries(noiselessx_unit_tests PRIVATE
         noiselessx_dsp
         noiselessx_audio
+        noiselessx_ai
         noiselessx_core
         GTest::gtest_main
     )
@@ -182,3 +206,4 @@ if(BUILD_TESTS)
     include(GoogleTest)
     gtest_discover_tests(noiselessx_unit_tests)
 endif()
+
