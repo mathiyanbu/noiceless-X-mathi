@@ -56,16 +56,29 @@ def export_impulse_model_to_onnx(
     with torch.no_grad():
         pyt_out = model(dummy_input)
 
-    torch.onnx.export(
-        model,
-        dummy_input,
-        str(out_file),
-        input_names=["features"],
-        output_names=["probability"],
-        dynamic_axes={"features": {0: "batch"}, "probability": {0: "batch"}},
-        opset_version=opset_version,
-        do_constant_folding=True
-    )
+    try:
+        torch.onnx.export(
+            model,
+            dummy_input,
+            str(out_file),
+            input_names=["features"],
+            output_names=["probability"],
+            dynamic_axes={"features": {0: "batch"}, "probability": {0: "batch"}},
+            opset_version=opset_version,
+            do_constant_folding=True,
+            dynamo=False
+        )
+    except TypeError:
+        torch.onnx.export(
+            model,
+            dummy_input,
+            str(out_file),
+            input_names=["features"],
+            output_names=["probability"],
+            dynamic_axes={"features": {0: "batch"}, "probability": {0: "batch"}},
+            opset_version=opset_version,
+            do_constant_folding=True
+        )
 
     # Validate ONNX graph
     onnx_model = onnx.load(str(out_file))

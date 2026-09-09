@@ -221,7 +221,8 @@ class RealtimePipeline:
         ai_confidence: float = 0.90,
         impulse_prob: float = 0.0,
         vad_prob: float = 0.85,
-        drift_ms: float = 0.0
+        drift_ms: float = 0.0,
+        ai_available: bool = True
     ) -> np.ndarray:
         t0 = time.perf_counter_ns()
 
@@ -242,7 +243,7 @@ class RealtimePipeline:
 
         # 3. AI branch
         t_ai_0 = time.perf_counter_ns()
-        if ai_enhanced_samples is not None and len(ai_enhanced_samples) >= n:
+        if ai_available and ai_enhanced_samples is not None and len(ai_enhanced_samples) >= n:
             ai_out = ai_enhanced_samples[:n]
         else:
             ai_out = preproc.copy()
@@ -276,7 +277,8 @@ class RealtimePipeline:
             impulse_probability=impulse_prob,
             vad_probability=vad_prob,
             nlms_available=nlms_available,
-            raw_input=AudioFrame(samples=primary_samples[:n])
+            raw_input=AudioFrame(samples=primary_samples[:n]),
+            ai_available=ai_available
         )
         fused_frame = self.fusion.fuse(inp)
         t_fuse_1 = time.perf_counter_ns()

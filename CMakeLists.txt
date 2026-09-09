@@ -178,6 +178,7 @@ target_link_libraries(noiselessx_impulse PUBLIC noiselessx_core noiselessx_dsp)
 if(ENABLE_ONNXRUNTIME AND ONNXRUNTIME_LIB)
     target_link_libraries(noiselessx_impulse PUBLIC ${ONNXRUNTIME_LIB})
     target_include_directories(noiselessx_impulse PUBLIC ${ONNXRUNTIME_INCLUDE_DIR})
+endif()
 # Fusion Controller Subsystem Library
 set(FUSION_SOURCES
     embedded/fusion/fusion_controller.cpp

@@ -2,6 +2,8 @@
 #include "embedded/audio/ring_buffer.hpp"
 #include <vector>
 #include <numeric>
+#include <thread>
+#include <atomic>
 
 using namespace noiselessx::audio;
 
@@ -108,3 +110,46 @@ TEST(RingBufferTest, BatchOverflow) {
     EXPECT_EQ(rb.overflow_count(), 4UL);
     EXPECT_TRUE(rb.full());
 }
+
+TEST(RingBufferTest, ConcurrentSpscProducerConsumerStress) {
+    constexpr size_t buffer_cap = 1024;
+    SpscRingBuffer<uint32_t, buffer_cap> rb;
+
+    constexpr uint32_t total_items = 50000;
+    std::atomic<bool> producer_done{false};
+
+    std::vector<uint32_t> consumed_items;
+    consumed_items.reserve(total_items);
+
+    std::thread producer([&]() {
+        for (uint32_t i = 0; i < total_items; ++i) {
+            while (rb.full()) {
+                std::this_thread::yield();
+            }
+            rb.push(i);
+        }
+        producer_done.store(true, std::memory_order_release);
+    });
+
+    std::thread consumer([&]() {
+        uint32_t val = 0;
+        while (!producer_done.load(std::memory_order_acquire) || !rb.empty()) {
+            if (rb.pop(val)) {
+                consumed_items.push_back(val);
+            } else {
+                std::this_thread::yield();
+            }
+        }
+    });
+
+    producer.join();
+    consumer.join();
+
+    EXPECT_EQ(consumed_items.size(), total_items);
+    for (uint32_t i = 0; i < total_items; ++i) {
+        ASSERT_EQ(consumed_items[i], i);
+    }
+    EXPECT_TRUE(rb.empty());
+    EXPECT_EQ(rb.overflow_count(), 0UL);
+}
+

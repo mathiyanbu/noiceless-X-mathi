@@ -73,3 +73,27 @@ TEST(RealtimePipelineTest, BypassModePropagation) {
     // Setting bypass should not crash and should update internal state
     pipeline.set_bypass(false);
 }
+
+TEST(RealtimePipelineTest, PipelineConfigParameterBoundsValidation) {
+    RealtimePipeline::PipelineConfig config;
+    EXPECT_GE(config.audio.sample_rate, 16000u);
+    EXPECT_GT(config.highpass_cutoff_hz, 0.0f);
+    EXPECT_LE(config.highpass_cutoff_hz, 500.0f);
+    EXPECT_GT(config.nlms_filter_length, 0);
+    EXPECT_GT(config.nlms_learning_rate, 0.0f);
+    EXPECT_LE(config.nlms_learning_rate, 1.0f);
+    EXPECT_GT(config.nlms_epsilon, 0.0f);
+    EXPECT_GT(config.ai_threads, 0);
+    EXPECT_FALSE(config.onnx_model_path.empty());
+}
+
+TEST(RealtimePipelineTest, PipelineConfigAlsaDeviceRouting) {
+    RealtimePipeline::PipelineConfig config;
+    config.audio.primary_device = "hw:CARD=Headset,DEV=0";
+    config.audio.reference_device = "hw:CARD=ErrorMic,DEV=0";
+    config.audio.output_device = "hw:CARD=Headset,DEV=0";
+
+    EXPECT_NE(config.audio.primary_device, config.audio.reference_device);
+    EXPECT_EQ(config.audio.primary_device, config.audio.output_device);
+}
+

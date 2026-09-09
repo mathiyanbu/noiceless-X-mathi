@@ -53,6 +53,7 @@ minversion = "7.0"
 testpaths = [
     "tests/unit",
     "tests/integration",
+    "tests/realtime",
 ]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
