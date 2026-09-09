@@ -1,0 +1,10 @@
+CompileFlags:
+  Add:
+    - -std=c++20
+    - -I.
+    - -Iembedded
+    - -Iembedded/dsp
+    - -Iembedded/fusion
+    - -Iembedded/audio
+    - -Iembedded/runtime
+    - -Wno-unknown-pragmas

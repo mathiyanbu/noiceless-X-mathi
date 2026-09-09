@@ -1,10 +1,73 @@
 #pragma once
 
-#include <cstddef>
-#include <cmath>
-#include <algorithm>
+#if defined(__has_include)
+  #if __has_include(<cstddef>)
+    #include <cstddef>
+  #endif
+  #if __has_include(<cstdint>)
+    #include <cstdint>
+  #endif
+  #if __has_include(<cmath>)
+    #include <cmath>
+  #endif
+  #if __has_include(<algorithm>)
+    #include <algorithm>
+  #endif
+#else
+  #include <cstddef>
+  #include <cstdint>
+  #include <cmath>
+  #include <algorithm>
+#endif
 
-namespace noiselessx::dsp {
+// Standard C headers guaranteed across all compiler environments
+#include <stddef.h>
+#include <stdint.h>
+#include <math.h>
+
+namespace noiselessx {
+namespace dsp {
+
+namespace detail {
+    template <typename T>
+    constexpr const T& max_val(const T& a, const T& b) noexcept {
+        return (a < b) ? b : a;
+    }
+
+    template <typename T>
+    constexpr const T& min_val(const T& a, const T& b) noexcept {
+        return (b < a) ? b : a;
+    }
+
+    template <typename T>
+    constexpr const T& clamp_val(const T& val, const T& low, const T& high) noexcept {
+        return (val < low) ? low : (high < val) ? high : val;
+    }
+
+    inline float sqrt_f(float x) noexcept {
+#if defined(__has_include) && __has_include(<cmath>)
+        return std::sqrt(x);
+#else
+        return ::sqrtf(x);
+#endif
+    }
+
+    inline float log10_f(float x) noexcept {
+#if defined(__has_include) && __has_include(<cmath>)
+        return std::log10(x);
+#else
+        return ::log10f(x);
+#endif
+    }
+
+    inline double log10_d(double x) noexcept {
+#if defined(__has_include) && __has_include(<cmath>)
+        return std::log10(x);
+#else
+        return ::log10(x);
+#endif
+    }
+} // namespace detail
 
 /**
  * @brief Live telemetry metrics computed by the real-time noise-floor tracker.
@@ -96,13 +159,13 @@ public:
         }
 
         // 2. dBFS Level meters (20 * log10(RMS))
-        const float rms_in = std::sqrt(std::max(p_frame_in, eps_));
-        const float rms_out = std::sqrt(std::max(p_frame_out, eps_));
-        const float rms_ref = std::sqrt(std::max(p_frame_ref, eps_));
+        const float rms_in = detail::sqrt_f(detail::max_val(p_frame_in, eps_));
+        const float rms_out = detail::sqrt_f(detail::max_val(p_frame_out, eps_));
+        const float rms_ref = detail::sqrt_f(detail::max_val(p_frame_ref, eps_));
 
-        metrics_.primary_level_dbfs = std::clamp(20.0f * std::log10(rms_in), -96.0f, 0.0f);
-        metrics_.output_level_dbfs = std::clamp(20.0f * std::log10(rms_out), -96.0f, 0.0f);
-        metrics_.reference_level_dbfs = std::clamp(20.0f * std::log10(rms_ref), -96.0f, 0.0f);
+        metrics_.primary_level_dbfs = detail::clamp_val(20.0f * detail::log10_f(rms_in), -96.0f, 0.0f);
+        metrics_.output_level_dbfs = detail::clamp_val(20.0f * detail::log10_f(rms_out), -96.0f, 0.0f);
+        metrics_.reference_level_dbfs = detail::clamp_val(20.0f * detail::log10_f(rms_ref), -96.0f, 0.0f);
 
         // 3. Update overall smoothed signal power
         p_sig_in_ = signal_alpha_ * p_sig_in_ + (1.0f - signal_alpha_) * p_frame_in;
@@ -122,19 +185,19 @@ public:
             }
         }
 
-        p_noise_in_ = std::max(p_noise_in_, eps_);
-        p_noise_out_ = std::max(p_noise_out_, eps_);
+        p_noise_in_ = detail::max_val(p_noise_in_, eps_);
+        p_noise_out_ = detail::max_val(p_noise_out_, eps_);
 
         // 5. Estimated SNR computation
-        const float s_in_est = std::max(p_sig_in_ - p_noise_in_, 1e-6f * p_noise_in_);
-        const float s_out_est = std::max(p_sig_out_ - p_noise_out_, 1e-6f * p_noise_out_);
+        const float s_in_est = detail::max_val(p_sig_in_ - p_noise_in_, 1e-6f * p_noise_in_);
+        const float s_out_est = detail::max_val(p_sig_out_ - p_noise_out_, 1e-6f * p_noise_out_);
 
-        const float snr_in = 10.0f * std::log10(s_in_est / p_noise_in_);
-        const float snr_out = 10.0f * std::log10(s_out_est / p_noise_out_);
+        const float snr_in = 10.0f * detail::log10_f(s_in_est / p_noise_in_);
+        const float snr_out = 10.0f * detail::log10_f(s_out_est / p_noise_out_);
 
-        metrics_.estimated_input_snr_db = std::clamp(snr_in, -20.0f, 45.0f);
-        metrics_.estimated_output_snr_db = std::clamp(snr_out, -20.0f, 45.0f);
-        metrics_.estimated_snr_improvement_db = std::clamp(metrics_.estimated_output_snr_db - metrics_.estimated_input_snr_db, -10.0f, 35.0f);
+        metrics_.estimated_input_snr_db = detail::clamp_val(snr_in, -20.0f, 45.0f);
+        metrics_.estimated_output_snr_db = detail::clamp_val(snr_out, -20.0f, 45.0f);
+        metrics_.estimated_snr_improvement_db = detail::clamp_val(metrics_.estimated_output_snr_db - metrics_.estimated_input_snr_db, -10.0f, 35.0f);
         metrics_.is_estimated = true;
 
         return metrics_;
@@ -184,8 +247,8 @@ public:
         in_noise_power += eps;
         out_noise_power += eps;
 
-        snr_in = static_cast<float>(10.0 * std::log10((s_power + eps) / in_noise_power));
-        snr_out = static_cast<float>(10.0 * std::log10((s_power + eps) / out_noise_power));
+        snr_in = static_cast<float>(10.0 * detail::log10_d((s_power + eps) / in_noise_power));
+        snr_out = static_cast<float>(10.0 * detail::log10_d((s_power + eps) / out_noise_power));
         delta_snr = snr_out - snr_in;
     }
 
@@ -204,4 +267,5 @@ private:
     LiveSnrMetrics metrics_;
 };
 
-} // namespace noiselessx::dsp
+} // namespace dsp
+} // namespace noiselessx
