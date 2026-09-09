@@ -1,5 +1,6 @@
 """
-Local IPC Client connecting FastAPI to the C++ runtime via Unix Domain Socket / Loopback TCP.
+Local IPC Client connecting FastAPI to the C++ / Python real-time runtime via Unix Domain Socket / Loopback TCP.
+Strict zero-mock: All communication is performed over real OS network/domain sockets.
 """
 
 import json
@@ -17,7 +18,7 @@ class RuntimeUnavailableError(Exception):
 
 class RuntimeIpcClient:
     """
-    Communicates with the C++ runtime over local Unix Domain Socket or TCP loopback.
+    Communicates with the runtime over local Unix Domain Socket or TCP loopback.
     Never transmits real-time audio samples: only telemetry queries and control commands.
     """
 
@@ -32,14 +33,6 @@ class RuntimeIpcClient:
         self.tcp_host = tcp_host
         self.tcp_port = tcp_port
         self.timeout = timeout
-        self._test_stub = None
-
-    def set_test_stub(self, stub):
-        """Used strictly in tests to simulate runtime responses with explicit labeling."""
-        self._test_stub = stub
-
-    def clear_test_stub(self):
-        self._test_stub = None
 
     def _create_connection(self) -> socket.socket:
         # 1. Prefer Unix Domain Socket on Linux if socket file exists
@@ -65,11 +58,8 @@ class RuntimeIpcClient:
 
     def send_command(self, command: str, **kwargs) -> Dict[str, Any]:
         """
-        Send a command payload to the C++ runtime and parse the JSON response.
+        Send a command payload to the runtime over the real socket and parse the JSON response.
         """
-        if self._test_stub is not None:
-            return self._test_stub.handle_command(command, **kwargs)
-
         sock = self._create_connection()
         try:
             payload = {"command": command, **kwargs}
@@ -86,7 +76,7 @@ class RuntimeIpcClient:
                     break
 
             if not response_data:
-                raise RuntimeUnavailableError("C++ runtime closed IPC socket without response.")
+                raise RuntimeUnavailableError("Runtime closed IPC socket without response.")
 
             return json.loads(response_data.decode("utf-8").strip())
         except (OSError, json.JSONDecodeError) as e:
@@ -98,10 +88,7 @@ class RuntimeIpcClient:
                 pass
 
     def is_connected(self) -> bool:
-        """Probe runtime connectivity with a lightweight ping command."""
-        if self._test_stub is not None:
-            return self._test_stub.is_alive()
-
+        """Probe runtime connectivity with a lightweight ping command over the real socket."""
         try:
             res = self.send_command("ping")
             return res.get("status") == "ok"

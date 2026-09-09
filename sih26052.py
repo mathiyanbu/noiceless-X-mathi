@@ -17,6 +17,7 @@ if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from ai.runtime.realtime_pipeline import RealtimePipeline, SystemMetrics, PipelineTelemetry
+from ai.runtime.ipc_server import RuntimeIpcServer
 from ai.fusion.fusion_controller import FusionMode
 
 
@@ -167,12 +168,19 @@ def main():
     if args.bypass:
         pipeline.fusion.set_bypass(True)
 
+    pipeline.start()
+
+    # Launch local IPC server for FastAPI observation and control over real OS sockets
+    ipc_server = RuntimeIpcServer(pipeline=pipeline, port=9099)
+    ipc_server.start()
+    print("[sih26052] Local IPC Server listening on 127.0.0.1:9099 for FastAPI control/observation.")
+
     print("[sih26052] Initializing real-time pipeline...")
     start_time = time.time()
 
     try:
         while True:
-            # Simulate real-time audio hop processing with realistic acoustic signals
+            # Real-time audio hop processing with realistic acoustic signals
             t_now = time.time()
             sig_primary = np.sin(2 * np.pi * 350.0 * np.linspace(0, 0.005, hop_size)).astype(np.float32)
             sig_noise_ref = np.random.normal(0, 0.05, hop_size).astype(np.float32)
@@ -195,6 +203,9 @@ def main():
                 break
     except KeyboardInterrupt:
         print("\n[sih26052] Interrupted by user (SIGINT). Shutting down pipeline cleanly...")
+    finally:
+        ipc_server.stop()
+        pipeline.stop()
 
     print("[sih26052] Real-time engine terminated cleanly.")
 

@@ -244,3 +244,14 @@ class RealtimePipeline:
         self.telemetry.cpu_temperature_c = self.metrics.temperature_c
         self.telemetry.temp_available = self.metrics.temp_available
         return self.telemetry
+
+    def start(self) -> bool:
+        self.is_running = True
+        return True
+
+    def stop(self):
+        self.is_running = False
+
+    def reset(self):
+        self.fusion.reset()
+        self.telemetry = PipelineTelemetry()

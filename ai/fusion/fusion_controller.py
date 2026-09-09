@@ -109,6 +109,14 @@ class FusionController:
     def set_bypass(self, bypass: bool):
         self.manual_bypass = bypass
 
+    @property
+    def bypass(self) -> bool:
+        return self.manual_bypass
+
+    @bypass.setter
+    def bypass(self, value: bool):
+        self.manual_bypass = value
+
     def set_manual_error(self, error: bool):
         self.manual_error = error
 
