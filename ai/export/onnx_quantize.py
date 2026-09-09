@@ -149,13 +149,27 @@ def evaluate_fp32_vs_int8(
     mean_int8_snr = float(np.mean(int8_snrs))
     delta_snr = mean_int8_snr - mean_fp32_snr
 
-    mean_fp32_stoi = float(np.mean(fp32_stois))
-    mean_int8_stoi = float(np.mean(int8_stois))
-    delta_stoi = mean_int8_stoi - mean_fp32_stoi
+    valid_fp32_stoi = [x for x in fp32_stois if x is not None]
+    valid_int8_stoi = [x for x in int8_stois if x is not None]
+    if valid_fp32_stoi and valid_int8_stoi:
+        mean_fp32_stoi = float(np.mean(valid_fp32_stoi))
+        mean_int8_stoi = float(np.mean(valid_int8_stoi))
+        delta_stoi = mean_int8_stoi - mean_fp32_stoi
+    else:
+        mean_fp32_stoi = None
+        mean_int8_stoi = None
+        delta_stoi = 0.0
 
-    mean_fp32_pesq = float(np.mean(fp32_pesqs))
-    mean_int8_pesq = float(np.mean(int8_pesqs))
-    delta_pesq = mean_int8_pesq - mean_fp32_pesq
+    valid_fp32_pesq = [x for x in fp32_pesqs if x is not None]
+    valid_int8_pesq = [x for x in int8_pesqs if x is not None]
+    if valid_fp32_pesq and valid_int8_pesq:
+        mean_fp32_pesq = float(np.mean(valid_fp32_pesq))
+        mean_int8_pesq = float(np.mean(valid_int8_pesq))
+        delta_pesq = mean_int8_pesq - mean_fp32_pesq
+    else:
+        mean_fp32_pesq = None
+        mean_int8_pesq = None
+        delta_pesq = 0.0
 
     mean_max_diff = float(np.mean(max_spectral_diffs))
 
@@ -173,14 +187,22 @@ def evaluate_fp32_vs_int8(
     }
 
     if verbose:
+        stoi_fp32_str = f"{mean_fp32_stoi:13.4f}" if mean_fp32_stoi is not None else "          N/A"
+        stoi_int8_str = f"{mean_int8_stoi:14.4f}" if mean_int8_stoi is not None else "           N/A"
+        stoi_delta_str = f"{delta_stoi:+.4f}" if mean_fp32_stoi is not None else "      N/A"
+
+        pesq_fp32_str = f"{mean_fp32_pesq:13.3f}" if mean_fp32_pesq is not None else "          N/A"
+        pesq_int8_str = f"{mean_int8_pesq:14.3f}" if mean_int8_pesq is not None else "           N/A"
+        pesq_delta_str = f"{delta_pesq:+.3f}" if mean_fp32_pesq is not None else "      N/A"
+
         print("\n==========================================================================")
         print("          Quantization Degradation Report: FP32 vs INT8 Comparison        ")
         print("==========================================================================")
         print(f"  Metric       | FP32 Baseline | INT8 Quantized | Delta (INT8 - FP32)")
         print("  -------------+---------------+----------------+--------------------")
         print(f"  SNR (dB)     | {mean_fp32_snr:13.2f} | {mean_int8_snr:14.2f} | {delta_snr:+.2f} dB")
-        print(f"  STOI [0-1]   | {mean_fp32_stoi:13.4f} | {mean_int8_stoi:14.4f} | {delta_stoi:+.4f}")
-        print(f"  PESQ [1-4.5] | {mean_fp32_pesq:13.3f} | {mean_int8_pesq:14.3f} | {delta_pesq:+.3f}")
+        print(f"  STOI [0-1]   | {stoi_fp32_str} | {stoi_int8_str} | {stoi_delta_str}")
+        print(f"  PESQ [1-4.5] | {pesq_fp32_str} | {pesq_int8_str} | {pesq_delta_str}")
         print(f"  Max Spec Diff|               |                | {mean_max_diff:.6e}")
         print("==========================================================================\n")
 
@@ -199,8 +221,8 @@ def select_deployment_model(
     Refuses to default to INT8 if degradation exceeds configured thresholds.
     """
     snr_drop = -metrics["delta_snr_db"]
-    stoi_drop = -metrics["delta_stoi"]
-    pesq_drop = -metrics["delta_pesq"]
+    stoi_drop = -metrics["delta_stoi"] if metrics.get("delta_stoi") is not None else 0.0
+    pesq_drop = -metrics["delta_pesq"] if metrics.get("delta_pesq") is not None else 0.0
 
     violations = []
     if snr_drop > max_snr_drop_db:
@@ -227,6 +249,7 @@ def select_deployment_model(
             print("  ==> Selected Deployment Model: INT8 (speech_enhancer_int8.onnx)")
 
     return selected
+
 
 
 if __name__ == "__main__":

@@ -99,6 +99,13 @@ class MetricsResponse(BaseModel):
     ai_confidence: float = 1.0
     impulse_probability: float = 0.0
     vad_probability: float = 0.0
+    estimated_input_snr_db: Optional[float] = None
+    estimated_output_snr_db: Optional[float] = None
+    estimated_snr_improvement_db: Optional[float] = None
+    snr_is_estimated: bool = True
+    primary_level_dbfs: Optional[float] = None
+    reference_level_dbfs: Optional[float] = None
+    output_level_dbfs: Optional[float] = None
     timestamp: float = Field(default_factory=time.time)
 
 

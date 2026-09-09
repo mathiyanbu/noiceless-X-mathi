@@ -61,8 +61,14 @@ const MeterRow: React.FC<MeterRowProps> = ({
 };
 
 export const LevelMeters: React.FC<LevelMetersProps> = ({ telemetry, runtimeConnected }) => {
-  const inputSnr = telemetry?.input_snr_db;
-  const outputSnr = telemetry?.output_snr_db;
+  const inputSnr = telemetry?.estimated_input_snr_db ?? telemetry?.input_snr_db;
+  const outputSnr = telemetry?.estimated_output_snr_db ?? telemetry?.output_snr_db;
+  const deltaSnr = telemetry?.estimated_snr_improvement_db ?? (
+    (outputSnr !== null && outputSnr !== undefined && inputSnr !== null && inputSnr !== undefined)
+      ? (outputSnr - inputSnr)
+      : null
+  );
+  const isEstimated = telemetry?.snr_is_estimated ?? true;
 
   return (
     <div className="glass-panel" style={{ padding: '20px' }}>
@@ -112,19 +118,36 @@ export const LevelMeters: React.FC<LevelMetersProps> = ({ telemetry, runtimeConn
         border: '1px solid var(--border-subtle)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-            SNR Metrics (Phase 13 Engine)
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+              SNR METRICS
+            </span>
+            {isEstimated && (
+              <span style={{
+                background: 'rgba(56, 189, 248, 0.15)',
+                color: '#38bdf8',
+                border: '1px solid rgba(56, 189, 248, 0.3)',
+                padding: '1px 6px',
+                borderRadius: '4px',
+                fontSize: '0.625rem',
+                fontWeight: 600,
+                letterSpacing: '0.02em',
+                textTransform: 'uppercase'
+              }}>
+                Estimated (Noise-Floor Tracker)
+              </span>
+            )}
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
             <HelpCircle size={12} />
-            <span>Honest Evaluation</span>
+            <span>Zero Fabrication</span>
           </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
           {/* Input SNR */}
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Input SNR</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Input SNR (est)</div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', fontWeight: 700, color: inputSnr !== null && inputSnr !== undefined ? '#38bdf8' : 'var(--text-muted)' }}>
               {inputSnr !== null && inputSnr !== undefined ? `${inputSnr.toFixed(1)} dB` : 'N/A'}
             </div>
@@ -132,7 +155,7 @@ export const LevelMeters: React.FC<LevelMetersProps> = ({ telemetry, runtimeConn
 
           {/* Output SNR */}
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Output SNR</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Output SNR (est)</div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', fontWeight: 700, color: outputSnr !== null && outputSnr !== undefined ? '#34d399' : 'var(--text-muted)' }}>
               {outputSnr !== null && outputSnr !== undefined ? `${outputSnr.toFixed(1)} dB` : 'N/A'}
             </div>
@@ -140,9 +163,9 @@ export const LevelMeters: React.FC<LevelMetersProps> = ({ telemetry, runtimeConn
 
           {/* SNR Gain Improvement */}
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Net SNR Gain</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', fontWeight: 700, color: (outputSnr && inputSnr) ? '#a78bfa' : 'var(--text-muted)' }}>
-              {(outputSnr && inputSnr) ? `+${(outputSnr - inputSnr).toFixed(1)} dB` : 'N/A'}
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Net SNR Gain (est)</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', fontWeight: 700, color: deltaSnr !== null && deltaSnr !== undefined ? '#a78bfa' : 'var(--text-muted)' }}>
+              {deltaSnr !== null && deltaSnr !== undefined ? `${deltaSnr >= 0 ? '+' : ''}${deltaSnr.toFixed(1)} dB` : 'N/A'}
             </div>
           </div>
         </div>

@@ -17,6 +17,8 @@ from ai.fusion.fusion_controller import (
     FusionInput,
     FusionController
 )
+from ai.evaluation.metrics import LiveNoiseFloorTracker
+from ai.runtime.session_logger import SessionLogger
 
 
 @dataclass
@@ -49,6 +51,17 @@ class PipelineTelemetry:
     ai_confidence: float = 1.0
     impulse_probability: float = 0.0
     vad_probability: float = 0.0
+
+    # Live Estimated SNR (noise floor tracker during non-speech frames)
+    estimated_input_snr_db: float = 0.0
+    estimated_output_snr_db: float = 0.0
+    estimated_snr_improvement_db: float = 0.0
+    snr_is_estimated: bool = True
+
+    # Level meters in dBFS
+    primary_level_dbfs: float = -96.0
+    reference_level_dbfs: float = -96.0
+    output_level_dbfs: float = -96.0
 
     cpu_per_core: List[float] = field(default_factory=list)
     overall_cpu_pct: float = 0.0
@@ -150,8 +163,55 @@ class RealtimePipeline:
 
         self.fusion = FusionController(FusionConfig(sample_rate=sample_rate, default_frame_size=hop_size))
         self.metrics = SystemMetrics()
+        self.snr_tracker = LiveNoiseFloorTracker(sample_rate=sample_rate)
         self.telemetry = PipelineTelemetry()
+        self.session_logger: Optional[SessionLogger] = None
         self.is_running = False
+
+    def enable_session_logging(
+        self,
+        logs_root: str = "logs",
+        session_id: Optional[str] = None,
+        metadata: Optional[dict] = None
+    ) -> SessionLogger:
+        """Activate structured session audit logging to logs/<session_id>/."""
+        meta = {
+            "sample_rate": self.sample_rate,
+            "hop_size": self.hop_size,
+            "fft_size": self.fft_size,
+            **(metadata or {})
+        }
+        self.session_logger = SessionLogger(logs_root=logs_root, session_id=session_id, system_metadata=meta)
+        return self.session_logger
+
+    def _telemetry_to_dict(self) -> dict:
+        t = self.telemetry
+        mode_str = t.fusion_mode.name if hasattr(t.fusion_mode, "name") else str(t.fusion_mode)
+        return {
+            "processed_frames": t.processed_frames,
+            "dropped_frames": t.dropped_frames,
+            "total_processing_us": t.total_processing_us,
+            "end_to_end_latency_ms": t.end_to_end_latency_ms,
+            "rtf": t.rtf,
+            "estimated_input_snr_db": t.estimated_input_snr_db,
+            "estimated_output_snr_db": t.estimated_output_snr_db,
+            "estimated_snr_improvement_db": t.estimated_snr_improvement_db,
+            "primary_level_dbfs": t.primary_level_dbfs,
+            "reference_level_dbfs": t.reference_level_dbfs,
+            "output_level_dbfs": t.output_level_dbfs,
+            "vad_probability": t.vad_probability,
+            "ai_confidence": t.ai_confidence,
+            "impulse_probability": t.impulse_probability,
+            "current_lambda": t.current_lambda,
+            "fusion_mode": mode_str,
+            "overall_cpu_pct": t.overall_cpu_pct,
+            "cpu_temperature_c": t.cpu_temperature_c,
+            "alsa_xruns_primary": t.alsa_xruns_primary,
+            "alsa_xruns_reference": t.alsa_xruns_reference,
+            "alsa_xruns_playback": t.alsa_xruns_playback,
+            "drift_ms": t.drift_ms,
+            "drift_samples": t.drift_samples
+        }
 
     def process_hop(
         self,
@@ -233,7 +293,29 @@ class RealtimePipeline:
         self.telemetry.fusion_mode = self.fusion.current_mode
         self.telemetry.current_lambda = self.fusion.current_lambda
         self.telemetry.impulse_envelope_gain = self.fusion.current_envelope_gain
+        self.telemetry.ai_confidence = ai_confidence
+        self.telemetry.impulse_probability = impulse_prob
+        self.telemetry.vad_probability = vad_prob
         self.telemetry.drift_ms = drift_ms
+
+        # 7. Live Noise-Floor & Estimated SNR Tracking
+        snr_res = self.snr_tracker.update(
+            primary_samples=primary_samples[:n],
+            output_samples=fused_frame.samples,
+            vad_prob=vad_prob,
+            reference_samples=reference_samples[:n] if reference_samples is not None else None
+        )
+        self.telemetry.estimated_input_snr_db = snr_res["estimated_input_snr_db"]
+        self.telemetry.estimated_output_snr_db = snr_res["estimated_output_snr_db"]
+        self.telemetry.estimated_snr_improvement_db = snr_res["estimated_snr_improvement_db"]
+        self.telemetry.primary_level_dbfs = snr_res["primary_level_dbfs"]
+        self.telemetry.reference_level_dbfs = snr_res["reference_level_dbfs"]
+        self.telemetry.output_level_dbfs = snr_res["output_level_dbfs"]
+        self.telemetry.snr_is_estimated = True
+
+        # 8. Non-blocking Session Audit Logging
+        if self.session_logger:
+            self.session_logger.log_frame(self._telemetry_to_dict())
 
         return fused_frame.samples
 
@@ -251,7 +333,11 @@ class RealtimePipeline:
 
     def stop(self):
         self.is_running = False
+        if self.session_logger:
+            self.session_logger.close()
+            self.session_logger = None
 
     def reset(self):
         self.fusion.reset()
+        self.snr_tracker.reset()
         self.telemetry = PipelineTelemetry()

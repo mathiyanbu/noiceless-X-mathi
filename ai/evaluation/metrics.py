@@ -13,7 +13,7 @@ Computes:
    during non-speech/VAD-negative frames, clearly labeled as estimated.
 """
 
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 import numpy as np
 
 try:
@@ -154,27 +154,45 @@ def compute_pesq(clean: np.ndarray, enhanced: np.ndarray, sample_rate: int = 160
 
 def evaluate_metrics(
     clean: np.ndarray,
-    noisy: np.ndarray,
-    enhanced: np.ndarray,
+    arg2: np.ndarray,
+    arg3: Optional[Any] = None,
     sample_rate: int = 16000
 ) -> Dict[str, Optional[float]]:
     """
-    Compute full objective evaluation metrics on clean/noisy/enhanced triple.
+    Compute objective evaluation metrics.
+    Supports two calling conventions:
+      1. Triples: evaluate_metrics(clean, noisy, enhanced, sample_rate=16000)
+      2. Pairs:   evaluate_metrics(clean, enhanced, sample_rate=16000)
+
     Only computes real metrics from actual signals; missing libraries return None.
     """
+    if isinstance(arg3, (int, float)) or arg3 is None:
+        # Called as evaluate_metrics(clean, enhanced, sample_rate)
+        noisy = arg2
+        enhanced = arg2
+        sr = int(arg3) if arg3 is not None else sample_rate
+    else:
+        # Called as evaluate_metrics(clean, noisy, enhanced, sample_rate)
+        noisy = arg2
+        enhanced = arg3
+        sr = sample_rate
+
     true_snr = compute_true_snr(clean, noisy, enhanced)
     si_sdr = compute_si_sdr(clean, enhanced)
-    stoi_val = compute_stoi(clean, enhanced, sample_rate)
-    pesq_val = compute_pesq(clean, enhanced, sample_rate)
+    stoi_val = compute_stoi(clean, enhanced, sr)
+    pesq_val = compute_pesq(clean, enhanced, sr)
 
     return {
+        "snr_db": true_snr["snr_out"],
         "snr_in_db": true_snr["snr_in"],
         "snr_out_db": true_snr["snr_out"],
         "delta_snr_db": true_snr["delta_snr"],
         "si_sdr_db": si_sdr,
+        "si_snr_db": si_sdr,
         "stoi": stoi_val,
         "pesq": pesq_val,
     }
+
 
 
 class LiveNoiseFloorTracker:

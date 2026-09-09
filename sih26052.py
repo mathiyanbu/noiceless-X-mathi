@@ -109,6 +109,12 @@ def render_telemetry_dashboard(t: PipelineTelemetry):
     print(f"    Impulse Gain Envelope: {t.impulse_envelope_gain:.3f}")
     print(f"    Signals: VAD={t.vad_probability*100:.1f}% | ImpulseProb={t.impulse_probability*100:.1f}% | AIConfidence={t.ai_confidence*100:.1f}%")
     print("--------------------------------------------------------------------------------")
+    print("  LIVE ACOUSTIC LEVELS & ESTIMATED SNR (Noise-Floor Tracker):")
+    print(f"    Estimated Input SNR:   {t.estimated_input_snr_db:6.1f} dB")
+    print(f"    Estimated Output SNR:  {t.estimated_output_snr_db:6.1f} dB")
+    print(f"    Estimated SNR Gain:    +{t.estimated_snr_improvement_db:5.1f} dB [ESTIMATED: Non-speech minimum stats]")
+    print(f"    Calibrated Levels:     Primary={t.primary_level_dbfs:5.1f} dBFS | Ref={t.reference_level_dbfs:5.1f} dBFS | Out={t.output_level_dbfs:5.1f} dBFS")
+    print("--------------------------------------------------------------------------------")
     print("  SYSTEM HARDWARE TELEMETRY (Real Kernel Metrics):")
     print(f"    Overall CPU Load:      {t.overall_cpu_pct:.1f}%")
     if t.cpu_per_core:
@@ -130,6 +136,7 @@ def main():
     parser.add_argument("--duration", type=int, default=0, help="Run duration in seconds (0 = continuous until Ctrl+C)")
     parser.add_argument("--bypass", action="store_true", help="Start pipeline in operator BYPASS mode")
     parser.add_argument("--server", action="store_true", help="Start the FastAPI control and telemetry backend server")
+    parser.add_argument("--logging", action="store_true", help="Enable structured session audit logging to logs/<timestamp>/")
     parser.add_argument("--host", default="0.0.0.0", help="Host address for FastAPI server (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=8000, help="Port for FastAPI server (default: 8000)")
     args = parser.parse_args()
@@ -167,6 +174,10 @@ def main():
     pipeline = RealtimePipeline(sample_rate=sample_rate, hop_size=hop_size)
     if args.bypass:
         pipeline.fusion.set_bypass(True)
+
+    if args.logging:
+        s_logger = pipeline.enable_session_logging(metadata=cfg)
+        print(f"[sih26052] Structured session audit logging active: {s_logger.session_dir}")
 
     pipeline.start()
 

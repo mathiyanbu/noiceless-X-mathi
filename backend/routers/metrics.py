@@ -57,6 +57,13 @@ def parse_telemetry_dict(data: Dict[str, Any]) -> MetricsResponse:
         ai_confidence=float(data.get("ai_confidence", 1.0)),
         impulse_probability=float(data.get("impulse_probability", 0.0)),
         vad_probability=float(data.get("vad_probability", 0.0)),
+        estimated_input_snr_db=float(data["estimated_input_snr_db"]) if "estimated_input_snr_db" in data and data["estimated_input_snr_db"] is not None else None,
+        estimated_output_snr_db=float(data["estimated_output_snr_db"]) if "estimated_output_snr_db" in data and data["estimated_output_snr_db"] is not None else None,
+        estimated_snr_improvement_db=float(data["estimated_snr_improvement_db"]) if "estimated_snr_improvement_db" in data and data["estimated_snr_improvement_db"] is not None else None,
+        snr_is_estimated=bool(data.get("snr_is_estimated", True)),
+        primary_level_dbfs=float(data["primary_level_dbfs"]) if "primary_level_dbfs" in data and data["primary_level_dbfs"] is not None else None,
+        reference_level_dbfs=float(data["reference_level_dbfs"]) if "reference_level_dbfs" in data and data["reference_level_dbfs"] is not None else None,
+        output_level_dbfs=float(data["output_level_dbfs"]) if "output_level_dbfs" in data and data["output_level_dbfs"] is not None else None,
     )
 
 

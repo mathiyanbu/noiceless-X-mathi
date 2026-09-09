@@ -101,6 +101,10 @@ export interface MetricsResponse {
   vad_probability: number;
   input_snr_db?: number | null;
   output_snr_db?: number | null;
+  estimated_input_snr_db?: number | null;
+  estimated_output_snr_db?: number | null;
+  estimated_snr_improvement_db?: number | null;
+  snr_is_estimated?: boolean;
   primary_level_dbfs?: number | null;
   reference_level_dbfs?: number | null;
   output_level_dbfs?: number | null;

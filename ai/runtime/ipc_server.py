@@ -162,7 +162,14 @@ class RuntimeIpcServer:
                     "impulse_envelope_gain": t.impulse_envelope_gain,
                     "ai_confidence": t.ai_confidence,
                     "impulse_probability": t.impulse_probability,
-                    "vad_probability": t.vad_probability
+                    "vad_probability": t.vad_probability,
+                    "estimated_input_snr_db": t.estimated_input_snr_db,
+                    "estimated_output_snr_db": t.estimated_output_snr_db,
+                    "estimated_snr_improvement_db": t.estimated_snr_improvement_db,
+                    "snr_is_estimated": t.snr_is_estimated,
+                    "primary_level_dbfs": t.primary_level_dbfs,
+                    "reference_level_dbfs": t.reference_level_dbfs,
+                    "output_level_dbfs": t.output_level_dbfs
                 }
             }
 
