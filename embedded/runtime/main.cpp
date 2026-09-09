@@ -1,4 +1,5 @@
 #include "realtime_pipeline.hpp"
+#include "ipc_server.hpp"
 #include "embedded/audio/device_enumerator.hpp"
 #include "embedded/fusion/fusion_types.hpp"
 
@@ -280,8 +281,113 @@ int main(int argc, char* argv[]) {
         pipeline.set_bypass(true);
     }
 
+    // Launch Local IPC Server for FastAPI observation and control
+    IpcServer ipc_server(9099, "/tmp/noiselessx.sock");
+    ipc_server.set_request_handler([&pipeline, &pipeline_config](const std::string& cmd, const std::string& raw_request) -> std::string {
+        if (cmd == "ping") {
+            std::ostringstream ss;
+            ss << "{\"status\":\"ok\",\"runtime\":\"" << (pipeline.is_running() ? "running" : "ready") << "\"}";
+            return ss.str();
+        } else if (cmd == "get_metrics" || cmd == "get_telemetry") {
+            auto t = pipeline.get_telemetry();
+            std::ostringstream ss;
+            ss << "{\"status\":\"ok\",\"metrics\":{"
+               << "\"latencies\":{"
+               << "\"capture_us\":" << t.capture_us << ","
+               << "\"preprocessing_us\":" << t.preprocessing_us << ","
+               << "\"stft_us\":" << t.stft_us << ","
+               << "\"ai_inference_us\":" << t.ai_inference_us << ","
+               << "\"istft_us\":" << t.istft_us << ","
+               << "\"nlms_us\":" << t.nlms_us << ","
+               << "\"fusion_us\":" << t.fusion_us << ","
+               << "\"playback_queue_us\":" << t.playback_queue_us << ","
+               << "\"total_processing_us\":" << t.total_processing_us << ","
+               << "\"end_to_end_latency_ms\":" << t.end_to_end_latency_ms
+               << "},"
+               << "\"rtf\":" << t.rtf << ","
+               << "\"processed_frames\":" << t.processed_frames << ","
+               << "\"dropped_frames\":" << t.dropped_frames << ","
+               << "\"alsa_xruns\":{"
+               << "\"primary\":" << t.alsa_xruns_primary << ","
+               << "\"reference\":" << t.alsa_xruns_reference << ","
+               << "\"playback\":" << t.alsa_xruns_playback
+               << "},"
+               << "\"drift_ms\":" << t.drift_ms << ","
+               << "\"drift_samples\":" << t.drift_samples << ","
+               << "\"drift_warning\":" << (t.drift_warning ? "true" : "false") << ","
+               << "\"fusion_mode\":\"" << to_string(t.fusion_mode) << "\","
+               << "\"current_lambda\":" << t.current_lambda << ","
+               << "\"impulse_envelope_gain\":" << t.impulse_envelope_gain << ","
+               << "\"ai_confidence\":" << t.ai_confidence << ","
+               << "\"impulse_probability\":" << t.impulse_probability << ","
+               << "\"vad_probability\":" << t.vad_probability
+               << "}}";
+            return ss.str();
+        } else if (cmd == "get_system") {
+            auto t = pipeline.get_telemetry();
+            std::ostringstream ss;
+            ss << "{\"status\":\"ok\",\"cpu\":{"
+               << "\"overall_pct\":" << t.overall_cpu_pct << ","
+               << "\"cores_pct\":[";
+            for (size_t i = 0; i < t.cpu_per_core.size(); ++i) {
+                ss << t.cpu_per_core[i];
+                if (i + 1 < t.cpu_per_core.size()) ss << ",";
+            }
+            ss << "]},\"temperature_c\":" << t.cpu_temperature_c
+               << ",\"temperature_available\":" << (t.temp_available ? "true" : "false") << "}";
+            return ss.str();
+        } else if (cmd == "start") {
+            bool ok = pipeline.start();
+            return ok ? "{\"status\":\"ok\",\"command\":\"start\",\"runtime_state\":\"running\"}"
+                      : "{\"status\":\"error\",\"command\":\"start\",\"message\":\"Failed to start pipeline\"}";
+        } else if (cmd == "stop") {
+            pipeline.stop();
+            return "{\"status\":\"ok\",\"command\":\"stop\",\"runtime_state\":\"stopped\"}";
+        } else if (cmd == "bypass") {
+            bool bp = (raw_request.find("\"bypass\": true") != std::string::npos ||
+                       raw_request.find("\"bypass\":true") != std::string::npos);
+            pipeline.set_bypass(bp);
+            std::ostringstream ss;
+            ss << "{\"status\":\"ok\",\"command\":\"bypass\",\"runtime_state\":\""
+               << (pipeline.is_running() ? "running" : "ready") << "\",\"bypass\":" << (bp ? "true" : "false") << "}";
+            return ss.str();
+        } else if (cmd == "reset") {
+            pipeline.reset();
+            return "{\"status\":\"ok\",\"command\":\"reset\",\"runtime_state\":\"ready\"}";
+        } else if (cmd == "get_devices") {
+            std::ostringstream ss;
+            ss << "{\"status\":\"ok\",\"config\":{"
+               << "\"sample_rate\":" << pipeline_config.audio.sample_rate << ","
+               << "\"channels\":" << pipeline_config.audio.channels << ","
+               << "\"frame_ms\":" << pipeline_config.audio.frame_ms << ","
+               << "\"hop_ms\":" << pipeline_config.audio.hop_ms << ","
+               << "\"primary_device\":\"" << pipeline_config.audio.primary_device << "\","
+               << "\"reference_device\":\"" << pipeline_config.audio.reference_device << "\","
+               << "\"output_device\":\"" << pipeline_config.audio.output_device << "\","
+               << "\"period_size\":" << pipeline_config.audio.period_size << ","
+               << "\"buffer_size\":" << pipeline_config.audio.buffer_size
+               << "}}";
+            return ss.str();
+        } else if (cmd == "get_model") {
+            std::ostringstream ss;
+            ss << "{\"status\":\"ok\",\"model\":{"
+               << "\"model_path\":\"" << pipeline_config.onnx_model_path << "\","
+               << "\"model_name\":\"ComplexCRN\","
+               << "\"quantization\":\"INT8 (ARM NEON Optimized)\","
+               << "\"execution_provider\":\"CPUExecutionProvider\","
+               << "\"intra_op_threads\":" << pipeline_config.ai_threads << ","
+               << "\"input_shape\":[\"noisy_stft: (B, 2, T, 257)\", \"hidden_in: (2, B, 128)\"],"
+               << "\"output_shape\":[\"enhanced_stft: (B, 2, T, 257)\", \"mask: (B, 2, T, 257)\", \"hidden_out: (2, B, 128)\"]"
+               << "}}";
+            return ss.str();
+        }
+        return "{\"status\":\"error\",\"message\":\"Unknown command\"}";
+    });
+    ipc_server.start();
+
     if (!pipeline.start()) {
         std::cerr << "[sih26052] Failed to start real-time pipeline. Exiting.\n";
+        ipc_server.stop();
         return 1;
     }
 
@@ -302,6 +408,7 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << "\n[sih26052] Shutdown signal received. Draining audio buffers...\n";
+    ipc_server.stop();
     pipeline.stop();
     std::cout << "[sih26052] Real-time engine terminated cleanly.\n";
 

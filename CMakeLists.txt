@@ -196,6 +196,7 @@ target_link_libraries(noiselessx_fusion PUBLIC noiselessx_core noiselessx_dsp)
 set(RUNTIME_SOURCES
     embedded/runtime/system_metrics.cpp
     embedded/runtime/realtime_pipeline.cpp
+    embedded/runtime/ipc_server.cpp
 )
 
 add_library(noiselessx_runtime STATIC ${RUNTIME_SOURCES})
@@ -216,6 +217,9 @@ target_link_libraries(noiselessx_runtime PUBLIC
     noiselessx_impulse
     noiselessx_fusion
 )
+if (WIN32)
+    target_link_libraries(noiselessx_runtime PUBLIC ws2_32)
+endif()
 
 # Main Executable: sih26052
 add_executable(sih26052 embedded/runtime/main.cpp)

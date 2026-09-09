@@ -145,6 +145,16 @@ void RealtimePipeline::set_bypass(bool bypass) {
     fusion_controller_.set_bypass(bypass);
 }
 
+void RealtimePipeline::reset() {
+    dc_blocker_.reset();
+    high_pass_.configure(config_.highpass_cutoff_hz, config_.audio.sample_rate, 0.707f);
+    vad_.reset();
+    nlms_.reset();
+    fusion_controller_.reset();
+    speech_enhancer_.reset_state();
+    telemetry_ = PipelineTelemetry{};
+}
+
 void RealtimePipeline::processing_thread_loop() {
     using namespace std::chrono;
 

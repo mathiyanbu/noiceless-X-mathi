@@ -128,7 +128,17 @@ def main():
     parser.add_argument("--test-devices", action="store_true", help="Enumerate and validate connected ALSA devices")
     parser.add_argument("--duration", type=int, default=0, help="Run duration in seconds (0 = continuous until Ctrl+C)")
     parser.add_argument("--bypass", action="store_true", help="Start pipeline in operator BYPASS mode")
+    parser.add_argument("--server", action="store_true", help="Start the FastAPI control and telemetry backend server")
+    parser.add_argument("--host", default="0.0.0.0", help="Host address for FastAPI server (default: 0.0.0.0)")
+    parser.add_argument("--port", type=int, default=8000, help="Port for FastAPI server (default: 8000)")
     args = parser.parse_args()
+
+    if args.server:
+        import uvicorn
+        print("\nSIH26052 — Starting NOICELESSX FastAPI Backend Server...")
+        print(f"Observing & controlling embedded runtime on {args.host}:{args.port}")
+        uvicorn.run("backend.main:app", host=args.host, port=args.port, reload=False)
+        return
 
     print("\nSIH26052 — NOICELESSX Real-Time Dual-Mic Audio Subsystem")
     print(f"Loading configuration: {args.config}...\n")
@@ -144,7 +154,9 @@ def main():
     if not args.realtime:
         print("[sih26052] Notice: Launching in hardware configuration check mode.")
         print(f"To activate the live real-time audio pipeline, run with:")
-        print(f"  {sys.executable} {__file__} --config {args.config} --realtime\n")
+        print(f"  {sys.executable} {__file__} --config {args.config} --realtime")
+        print("To launch the FastAPI control and telemetry observation backend, run with:")
+        print(f"  {sys.executable} {__file__} --server --port 8000\n")
         return
 
     sample_rate = cfg.get("audio", {}).get("sample_rate", 16000)

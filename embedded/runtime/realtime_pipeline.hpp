@@ -138,6 +138,11 @@ public:
      */
     void set_bypass(bool bypass);
 
+    /**
+     * @brief Reset internal DSP filters, recurrent model state, and telemetry counters.
+     */
+    void reset();
+
     [[nodiscard]] const PipelineConfig& get_config() const noexcept { return config_; }
 
 private:
