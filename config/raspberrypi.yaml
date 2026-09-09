@@ -35,8 +35,22 @@ nlms:
 
 impulse:
   enabled: true
-  threshold_db: 18.0
-  decay_ratio: 0.95
+  use_onnx: false
+  model_path: "models/onnx/impulse_detector.onnx"
+  threshold_on: 0.65
+  threshold_off: 0.35
+  attack_alpha: 0.80
+  release_alpha: 0.15
+  weights:
+    rms: 1.2
+    spectral_flux: 0.001
+    crest_factor: 3.5
+    zcr: -2.0
+    band_low: -0.5
+    band_mid_low: -0.3
+    band_mid_high: 1.0
+    band_high: 3.0
+    bias: -14.0
 
 fusion:
   spectral_alpha: 0.7
