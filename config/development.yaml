@@ -25,9 +25,11 @@ nlms:
   # Dual-mic active by default
   enabled: true
   filter_length: 256
+  learning_rate: 0.05
   step_size: 0.05
-  leakage: 0.0001
+  epsilon: 1e-6
   eps: 1e-6
+  leakage: 0.0001
 
 impulse:
   enabled: true

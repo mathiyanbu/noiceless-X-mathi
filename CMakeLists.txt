@@ -109,6 +109,8 @@ set(DSP_SOURCES
     embedded/dsp/stft.cpp
     embedded/dsp/vad.cpp
     embedded/dsp/mono_pipeline.cpp
+    embedded/dsp/nlms.cpp
+    embedded/dsp/dual_mic_pipeline.cpp
 )
 
 add_library(noiselessx_dsp STATIC ${DSP_SOURCES})
@@ -167,6 +169,7 @@ if(BUILD_TESTS)
         tests/unit/test_ring_buffer.cpp
         tests/unit/test_drift_detector.cpp
         tests/unit/test_dsp.cpp
+        tests/unit/test_nlms.cpp
     )
 
     target_link_libraries(noiselessx_unit_tests PRIVATE
