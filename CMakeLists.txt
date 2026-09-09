@@ -86,6 +86,7 @@ endif()
 
 # Include directories
 include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/embedded
     ${CMAKE_CURRENT_SOURCE_DIR}/config
 )
@@ -93,17 +94,37 @@ include_directories(
 # Core library interface scaffolding
 add_library(noiselessx_core INTERFACE)
 target_include_directories(noiselessx_core INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/embedded
 )
 
+# Audio Subsystem Library
+set(AUDIO_SOURCES
+    embedded/audio/device_enumerator.cpp
+    embedded/audio/alsa_backend.cpp
+)
+
+add_library(noiselessx_audio STATIC ${AUDIO_SOURCES})
+target_include_directories(noiselessx_audio PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/embedded
+)
+target_link_libraries(noiselessx_audio PUBLIC noiselessx_core)
+
 if(ENABLE_ALSA AND ALSA_FOUND)
-    target_link_libraries(noiselessx_core INTERFACE ${ALSA_LIBRARIES})
-    target_include_directories(noiselessx_core INTERFACE ${ALSA_INCLUDE_DIRS})
+    target_link_libraries(noiselessx_audio PUBLIC ${ALSA_LIBRARIES})
+    target_include_directories(noiselessx_audio PUBLIC ${ALSA_INCLUDE_DIRS})
 endif()
 
 if(ENABLE_ONNXRUNTIME AND ONNXRUNTIME_LIB)
     target_link_libraries(noiselessx_core INTERFACE ${ONNXRUNTIME_LIB})
     target_include_directories(noiselessx_core INTERFACE ${ONNXRUNTIME_INCLUDE_DIR})
+endif()
+
+# Hardware Test Utility (built when ALSA is enabled or on Linux target)
+if(ENABLE_ALSA)
+    add_executable(audio_test tools/audio_test.cpp)
+    target_link_libraries(audio_test PRIVATE noiselessx_audio noiselessx_core)
 endif()
 
 # Testing Scaffolding with GoogleTest
@@ -119,12 +140,15 @@ if(BUILD_TESTS)
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
 
-    # Unit test executable
+    # Unit test executable covering lock-free ring buffers, drift detection, and sanity
     add_executable(noiselessx_unit_tests
         tests/unit/test_sanity.cpp
+        tests/unit/test_ring_buffer.cpp
+        tests/unit/test_drift_detector.cpp
     )
 
     target_link_libraries(noiselessx_unit_tests PRIVATE
+        noiselessx_audio
         noiselessx_core
         GTest::gtest_main
     )
