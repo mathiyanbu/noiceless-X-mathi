@@ -30,6 +30,7 @@ dependencies = [
     "pydantic>=2.4.0",
     "pyyaml>=6.0",
     "soundfile>=0.12.1",
+    "onnxscript>=0.1.0",
 ]
 
 [project.optional-dependencies]
@@ -57,4 +58,6 @@ python_functions = ["test_*"]
 addopts = "-v --tb=short"
 filterwarnings = [
     "ignore::DeprecationWarning",
+    "ignore::torch.jit.TracerWarning",
+    "ignore:.*variable length with GRU.*:UserWarning",
 ]

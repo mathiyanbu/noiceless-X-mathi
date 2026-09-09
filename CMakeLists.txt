@@ -178,7 +178,19 @@ target_link_libraries(noiselessx_impulse PUBLIC noiselessx_core noiselessx_dsp)
 if(ENABLE_ONNXRUNTIME AND ONNXRUNTIME_LIB)
     target_link_libraries(noiselessx_impulse PUBLIC ${ONNXRUNTIME_LIB})
     target_include_directories(noiselessx_impulse PUBLIC ${ONNXRUNTIME_INCLUDE_DIR})
-endif()
+# Fusion Controller Subsystem Library
+set(FUSION_SOURCES
+    embedded/fusion/fusion_controller.cpp
+)
+
+add_library(noiselessx_fusion STATIC ${FUSION_SOURCES})
+target_include_directories(noiselessx_fusion PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/embedded
+    ${CMAKE_CURRENT_SOURCE_DIR}/embedded/fusion
+    ${CMAKE_CURRENT_SOURCE_DIR}/embedded/audio
+    ${CMAKE_CURRENT_SOURCE_DIR}/embedded/dsp
+)
+target_link_libraries(noiselessx_fusion PUBLIC noiselessx_core noiselessx_dsp)
 
 # Hardware Test Utility (built when ALSA is enabled or on Linux target)
 if(ENABLE_ALSA)
@@ -203,7 +215,7 @@ if(BUILD_TESTS)
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
 
-    # Unit test executable covering lock-free ring buffers, drift detection, DSP pipeline, AI inference, and impulse detection
+    # Unit test executable covering lock-free ring buffers, drift detection, DSP pipeline, AI inference, impulse detection, and fusion controller
     add_executable(noiselessx_unit_tests
         tests/unit/test_sanity.cpp
         tests/unit/test_ring_buffer.cpp
@@ -212,6 +224,7 @@ if(BUILD_TESTS)
         tests/unit/test_nlms.cpp
         tests/unit/test_speech_enhancer.cpp
         tests/unit/test_impulse_detector.cpp
+        tests/unit/test_fusion_controller.cpp
     )
 
     target_link_libraries(noiselessx_unit_tests PRIVATE
@@ -219,6 +232,7 @@ if(BUILD_TESTS)
         noiselessx_audio
         noiselessx_ai
         noiselessx_impulse
+        noiselessx_fusion
         noiselessx_core
         GTest::gtest_main
     )

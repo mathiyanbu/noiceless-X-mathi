@@ -8,6 +8,7 @@ import onnx
 import onnxruntime as ort
 import torch
 import torch.nn as nn
+import warnings
 
 # Ensure repository root is on sys.path
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -95,16 +96,31 @@ def export_onnx_model(
     if verbose:
         print(f"[Step 3] Exporting ONNX graph to: {out_file}")
 
-    torch.onnx.export(
-        wrapper,
-        (dummy_x, dummy_hidden),
-        str(out_file),
-        input_names=["noisy_stft", "hidden_in"],
-        output_names=["enhanced_stft", "mask", "hidden_out"],
-        dynamic_axes=dynamic_axes,
-        opset_version=opset_version,
-        do_constant_folding=True
-    )
+    export_kwargs = {
+        "input_names": ["noisy_stft", "hidden_in"],
+        "output_names": ["enhanced_stft", "mask", "hidden_out"],
+        "dynamic_axes": dynamic_axes,
+        "opset_version": opset_version,
+        "do_constant_folding": True
+    }
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=torch.jit.TracerWarning)
+        warnings.filterwarnings("ignore", category=UserWarning, message=".*variable length with GRU.*")
+        try:
+            torch.onnx.export(
+                wrapper,
+                (dummy_x, dummy_hidden),
+                str(out_file),
+                dynamo=False,
+                **export_kwargs
+            )
+        except TypeError:
+            torch.onnx.export(
+                wrapper,
+                (dummy_x, dummy_hidden),
+                str(out_file),
+                **export_kwargs
+            )
 
     # 4. Check ONNX Model Integrity
     onnx_model = onnx.load(str(out_file))

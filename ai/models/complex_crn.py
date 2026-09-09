@@ -116,7 +116,8 @@ class ComplexCRN(nn.Module):
             new_hidden: Updated GRU hidden state
         """
         b, c, t, f = x.shape
-        assert c == 2, f"Expected 2 complex channels (Real, Imag), got {c}"
+        if not torch.jit.is_tracing():
+            assert c == 2, f"Expected 2 complex channels (Real, Imag), got {c}"
 
         # Align 257 bins to 256 for power-of-2 downsampling
         if f == 257:
