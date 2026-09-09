@@ -8,7 +8,8 @@
 
 struct PFFFT_Setup;
 
-namespace noiselessx::dsp {
+namespace noiselessx {
+namespace dsp {
 
 /**
  * @brief Complex spectral frame structure (257 frequency bins for N=512).
@@ -107,4 +108,5 @@ private:
     std::vector<float> accum_weight_buffer_; // Size 2*N for WOLA normalization
 };
 
-} // namespace noiselessx::dsp
+} // namespace dsp
+} // namespace noiselessx

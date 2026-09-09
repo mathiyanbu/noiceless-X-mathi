@@ -3,7 +3,8 @@
 #include <cmath>
 #include <chrono>
 
-namespace noiselessx::fusion {
+namespace noiselessx {
+namespace fusion {
 
 FusionController::FusionController(const FusionConfig& config)
     : config_(config),
@@ -316,4 +317,5 @@ void FusionController::log_fault_event(FusionMode mode, const std::string& reaso
     }
 }
 
-} // namespace noiselessx::fusion
+} // namespace fusion
+} // namespace noiselessx

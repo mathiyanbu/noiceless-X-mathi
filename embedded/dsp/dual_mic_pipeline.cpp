@@ -2,7 +2,8 @@
 #include <cmath>
 #include <algorithm>
 
-namespace noiselessx::dsp {
+namespace noiselessx {
+namespace dsp {
 
 DualMicPipeline::DualMicPipeline(
     float sample_rate,
@@ -81,4 +82,5 @@ void DualMicPipeline::process_dual_hop(
     }
 }
 
-} // namespace noiselessx::dsp
+} // namespace dsp
+} // namespace noiselessx

@@ -5,7 +5,8 @@
 #include <cstdint>
 #include <chrono>
 
-namespace noiselessx::runtime {
+namespace noiselessx {
+namespace runtime {
 
 struct CpuSnapshot {
     uint64_t user{0};
@@ -84,4 +85,5 @@ private:
     bool initialized_{false};
 };
 
-} // namespace noiselessx::runtime
+} // namespace runtime
+} // namespace noiselessx

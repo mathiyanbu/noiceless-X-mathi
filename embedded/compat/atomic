@@ -1,0 +1,19 @@
+#pragma once
+#include "cstdint"
+
+namespace std {
+    template <typename T>
+    class atomic {
+    public:
+        atomic() noexcept = default;
+        constexpr atomic(T desired) noexcept : val_(desired) {}
+        atomic(const atomic&) = delete;
+        atomic& operator=(const atomic&) = delete;
+        T load() const noexcept { return val_; }
+        void store(T desired) noexcept { val_ = desired; }
+        T operator=(T desired) noexcept { store(desired); return desired; }
+        operator T() const noexcept { return load(); }
+    private:
+        T val_{};
+    };
+}

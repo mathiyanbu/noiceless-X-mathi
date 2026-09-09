@@ -1,0 +1,24 @@
+#pragma once
+#include "chrono"
+
+namespace std {
+    class thread {
+    public:
+        thread() noexcept = default;
+        template <class Function, class... Args>
+        explicit thread(Function&& f, Args&&... args) {}
+        ~thread() = default;
+        thread(const thread&) = delete;
+        thread& operator=(const thread&) = delete;
+        thread(thread&&) noexcept = default;
+        thread& operator=(thread&&) noexcept = default;
+        bool joinable() const noexcept { return false; }
+        void join() {}
+        void detach() {}
+    };
+
+    namespace this_thread {
+        template <class Rep, class Period>
+        void sleep_for(const chrono::duration<Rep, Period>& d) {}
+    }
+}

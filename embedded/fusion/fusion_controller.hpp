@@ -1,12 +1,15 @@
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include "fusion_types.hpp"
 #include <string>
 #include <chrono>
 #include <functional>
 #include <vector>
 
-namespace noiselessx::fusion {
+namespace noiselessx {
+namespace fusion {
 
 /**
  * @brief Dual-Microphone Real-Time Fusion Controller with Explicit State Machine.
@@ -121,6 +124,7 @@ private:
     FaultLoggerCallback fault_logger_{nullptr};
 };
 
-} // namespace noiselessx::fusion
+} // namespace fusion
+} // namespace noiselessx
 
 using FusionController = noiselessx::fusion::FusionController;

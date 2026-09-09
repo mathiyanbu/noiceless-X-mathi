@@ -1,0 +1,23 @@
+#pragma once
+#include "cstddef"
+#include "memory"
+
+namespace std {
+    template <typename Sig>
+    class function;
+
+    template <typename R, typename... Args>
+    class function<R(Args...)> {
+    public:
+        function() noexcept {}
+        function(nullptr_t) noexcept {}
+        template <typename F>
+        function(F f) {}
+        function(const function&) = default;
+        function(function&&) noexcept = default;
+        function& operator=(const function&) = default;
+        function& operator=(function&&) noexcept = default;
+        explicit operator bool() const noexcept { return false; }
+        R operator()(Args... args) const { return R(); }
+    };
+}

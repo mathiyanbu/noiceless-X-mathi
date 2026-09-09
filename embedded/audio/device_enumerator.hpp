@@ -5,7 +5,8 @@
 #include <string>
 #include <iostream>
 
-namespace noiselessx::audio {
+namespace noiselessx {
+namespace audio {
 
 class DeviceEnumerator {
 public:
@@ -31,4 +32,5 @@ public:
     );
 };
 
-} // namespace noiselessx::audio
+} // namespace audio
+} // namespace noiselessx

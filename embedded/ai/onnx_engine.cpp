@@ -27,7 +27,8 @@ static std::wstring string_to_wstring(const std::string& s) {
 
 #endif // NOICELESSX_HAS_ONNXRUNTIME
 
-namespace noiselessx::ai {
+namespace noiselessx {
+namespace ai {
 
 static constexpr size_t NUM_BINS = 257;
 static constexpr size_t STFT_CHANNELS = 2; // 0 = Real, 1 = Imag
@@ -350,4 +351,5 @@ const std::string& SpeechEnhancer::get_last_error() const noexcept {
     return impl_->get_last_error();
 }
 
-} // namespace noiselessx::ai
+} // namespace ai
+} // namespace noiselessx

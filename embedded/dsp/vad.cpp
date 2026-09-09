@@ -3,7 +3,8 @@
 #include <algorithm>
 #include <numeric>
 
-namespace noiselessx::dsp {
+namespace noiselessx {
+namespace dsp {
 
 FeatureBasedVad::FeatureBasedVad(
     float sample_rate,
@@ -125,4 +126,5 @@ VadDecision FeatureBasedVad::process_frame(
     return dec;
 }
 
-} // namespace noiselessx::dsp
+} // namespace dsp
+} // namespace noiselessx

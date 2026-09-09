@@ -1,0 +1,17 @@
+#pragma once
+#include "string"
+#include "iostream"
+
+namespace std {
+    class istringstream {
+    public:
+        explicit istringstream(const string&) {}
+        template <typename T>
+        istringstream& operator>>(T&) { return *this; }
+    };
+
+    class ostringstream : public ostream {
+    public:
+        string str() const { return string(); }
+    };
+}

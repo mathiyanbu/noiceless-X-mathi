@@ -6,7 +6,8 @@
 #include <span>
 #include <vector>
 
-namespace noiselessx::dsp {
+namespace noiselessx {
+namespace dsp {
 
 struct DualMicStatus {
     bool nlms_enabled{true};
@@ -82,4 +83,5 @@ private:
     std::vector<float> nlms_out_scratch_;
 };
 
-} // namespace noiselessx::dsp
+} // namespace dsp
+} // namespace noiselessx

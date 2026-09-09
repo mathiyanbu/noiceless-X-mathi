@@ -6,7 +6,8 @@
 #include <cstdio>
 #include <cstring>
 
-namespace noiselessx::runtime {
+namespace noiselessx {
+namespace runtime {
 
 SystemMetrics::SystemMetrics() {
     last_sample_time_ = std::chrono::steady_clock::now();
@@ -137,4 +138,5 @@ void SystemMetrics::read_cpu_temp() {
     temp_source_ = "N/A";
 }
 
-} // namespace noiselessx::runtime
+} // namespace runtime
+} // namespace noiselessx

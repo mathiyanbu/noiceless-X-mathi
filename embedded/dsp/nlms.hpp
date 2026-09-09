@@ -4,7 +4,8 @@
 #include <cstddef>
 #include <span>
 
-namespace noiselessx::dsp {
+namespace noiselessx {
+namespace dsp {
 
 /**
  * @brief Normalized Least Mean Squares (NLMS) Adaptive Filter.
@@ -49,4 +50,5 @@ private:
     bool is_initialized{false};
 };
 
-} // namespace noiselessx::dsp
+} // namespace dsp
+} // namespace noiselessx

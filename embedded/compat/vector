@@ -1,0 +1,43 @@
+#pragma once
+#include "cstddef"
+#include "initializer_list"
+
+namespace std {
+    template <typename T>
+    class vector {
+    public:
+        using value_type = T;
+        using size_type = size_t;
+        using iterator = T*;
+        using const_iterator = const T*;
+
+        vector() noexcept = default;
+        explicit vector(size_t n, const T& val = T()) {}
+        vector(initializer_list<T> init) {}
+        template <class InputIt>
+        vector(InputIt first, InputIt last) {}
+        vector(const vector&) = default;
+        vector(vector&&) noexcept = default;
+        vector& operator=(const vector&) = default;
+        vector& operator=(vector&&) noexcept = default;
+
+        size_t size() const noexcept { return 0; }
+        bool empty() const noexcept { return true; }
+        void resize(size_t n, const T& val = T()) {}
+        void reserve(size_t n) {}
+        void clear() noexcept {}
+        void push_back(const T& val) {}
+        template <typename... Args>
+        void emplace_back(Args&&... args) {}
+
+        T& operator[](size_t idx) noexcept { return *data(); }
+        const T& operator[](size_t idx) const noexcept { return *data(); }
+        T* data() noexcept { return nullptr; }
+        const T* data() const noexcept { return nullptr; }
+
+        iterator begin() noexcept { return nullptr; }
+        const_iterator begin() const noexcept { return nullptr; }
+        iterator end() noexcept { return nullptr; }
+        const_iterator end() const noexcept { return nullptr; }
+    };
+}

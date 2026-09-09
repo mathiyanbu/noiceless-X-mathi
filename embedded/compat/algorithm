@@ -1,0 +1,25 @@
+#pragma once
+#include "cstddef"
+namespace std {
+    template <typename T>
+    constexpr const T& min(const T& a, const T& b) noexcept {
+        return (b < a) ? b : a;
+    }
+    template <typename T>
+    constexpr const T& max(const T& a, const T& b) noexcept {
+        return (a < b) ? b : a;
+    }
+    template <typename T>
+    constexpr const T& clamp(const T& val, const T& low, const T& high) noexcept {
+        return (val < low) ? low : (high < val) ? high : val;
+    }
+    template <typename ForwardIt, typename T>
+    void fill(ForwardIt first, ForwardIt last, const T& value) {
+        for (; first != last; ++first) *first = value;
+    }
+    template <typename InputIt, typename OutputIt>
+    OutputIt copy(InputIt first, InputIt last, OutputIt d_first) {
+        while (first != last) *d_first++ = *first++;
+        return d_first;
+    }
+}

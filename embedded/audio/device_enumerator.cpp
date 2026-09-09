@@ -6,7 +6,8 @@
 #include <alsa/asoundlib.h>
 #endif
 
-namespace noiselessx::audio {
+namespace noiselessx {
+namespace audio {
 
 std::vector<AudioDeviceInfo> DeviceEnumerator::enumerate_devices() {
     std::vector<AudioDeviceInfo> devices;
@@ -137,4 +138,5 @@ const AudioDeviceInfo* DeviceEnumerator::find_device_matching(
     return nullptr;
 }
 
-} // namespace noiselessx::audio
+} // namespace audio
+} // namespace noiselessx

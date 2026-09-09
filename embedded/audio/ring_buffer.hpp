@@ -8,7 +8,8 @@
 #include <span>
 #include <type_traits>
 
-namespace noiselessx::audio {
+namespace noiselessx {
+namespace audio {
 
 /**
  * @brief Lock-free, bounded Single-Producer Single-Consumer (SPSC) Ring Buffer.
@@ -201,4 +202,5 @@ private:
     alignas(64) std::array<T, Capacity> buffer_{};
 };
 
-} // namespace noiselessx::audio
+} // namespace audio
+} // namespace noiselessx

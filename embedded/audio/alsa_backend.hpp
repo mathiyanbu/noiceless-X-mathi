@@ -12,7 +12,8 @@
 #include <alsa/asoundlib.h>
 #endif
 
-namespace noiselessx::audio {
+namespace noiselessx {
+namespace audio {
 
 /**
  * @brief Real ALSA Audio Subsystem for Dual-Microphone Raspberry Pi 4/5 Operation.
@@ -123,4 +124,5 @@ private:
     std::thread playback_thread_;
 };
 
-} // namespace noiselessx::audio
+} // namespace audio
+} // namespace noiselessx

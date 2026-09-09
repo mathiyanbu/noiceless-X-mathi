@@ -1,12 +1,15 @@
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include <string>
 #include <functional>
 #include <thread>
 #include <atomic>
 #include <memory>
 
-namespace noiselessx::runtime {
+namespace noiselessx {
+namespace runtime {
 
 /**
  * @brief Lightweight Local IPC Server for Real-Time Runtime Control and Telemetry.
@@ -71,4 +74,5 @@ private:
     RequestHandler handler_{nullptr};
 };
 
-} // namespace noiselessx::runtime
+} // namespace runtime
+} // namespace noiselessx

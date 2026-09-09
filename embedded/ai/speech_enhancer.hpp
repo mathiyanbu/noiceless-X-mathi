@@ -7,7 +7,8 @@
 #include <memory>
 #include <chrono>
 
-namespace noiselessx::ai {
+namespace noiselessx {
+namespace ai {
 
 /**
  * @brief Complex spectral frame structure containing 257 bins (for N=512 FFT at 16kHz).
@@ -107,7 +108,8 @@ private:
     std::unique_ptr<Impl> impl_;
 };
 
-} // namespace noiselessx::ai
+} // namespace ai
+} // namespace noiselessx
 
 // Global aliases matching user request specification
 using ComplexFrame = noiselessx::ai::ComplexFrame;

@@ -1,0 +1,14 @@
+#pragma once
+#include "math.h"
+namespace std {
+    inline float sqrt(float x) noexcept { return __builtin_sqrtf(x); }
+    inline double sqrt(double x) noexcept { return __builtin_sqrt(x); }
+    inline float log10(float x) noexcept { return __builtin_log10f(x); }
+    inline double log10(double x) noexcept { return __builtin_log10(x); }
+    inline float abs(float x) noexcept { return __builtin_fabsf(x); }
+    inline double abs(double x) noexcept { return __builtin_fabs(x); }
+    inline float exp(float x) noexcept { return __builtin_expf(x); }
+    inline double exp(double x) noexcept { return __builtin_exp(x); }
+    inline float sin(float x) noexcept { return __builtin_sinf(x); }
+    inline float cos(float x) noexcept { return __builtin_cosf(x); }
+}

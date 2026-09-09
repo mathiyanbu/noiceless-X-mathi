@@ -5,7 +5,8 @@
 #include <atomic>
 #include <chrono>
 
-namespace noiselessx::audio {
+namespace noiselessx {
+namespace audio {
 
 /**
  * @brief Inter-Stream Clock Drift Detector and Synchronizer.
@@ -132,4 +133,5 @@ private:
     std::atomic<bool> warning_active_{false};
 };
 
-} // namespace noiselessx::audio
+} // namespace audio
+} // namespace noiselessx

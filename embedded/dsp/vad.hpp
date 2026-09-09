@@ -4,7 +4,8 @@
 #include <span>
 #include <vector>
 
-namespace noiselessx::dsp {
+namespace noiselessx {
+namespace dsp {
 
 struct VadDecision {
     bool is_speech{false};
@@ -75,4 +76,5 @@ private:
     int max_hangover_frames_{5};
 };
 
-} // namespace noiselessx::dsp
+} // namespace dsp
+} // namespace noiselessx

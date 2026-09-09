@@ -4,7 +4,8 @@
 #include <cmath>
 #include <span>
 
-namespace noiselessx::dsp {
+namespace noiselessx {
+namespace dsp {
 
 /**
  * @brief Direct Form II Transposed Biquad Filter.
@@ -110,4 +111,5 @@ private:
     float s2_{0.0f};
 };
 
-} // namespace noiselessx::dsp
+} // namespace dsp
+} // namespace noiselessx

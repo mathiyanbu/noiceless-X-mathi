@@ -6,6 +6,9 @@
 #include <chrono>
 
 #if defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
@@ -25,7 +28,8 @@ using socket_t = int;
 #define CLOSE_SOCKET(s) close(s)
 #endif
 
-namespace noiselessx::runtime {
+namespace noiselessx {
+namespace runtime {
 
 IpcServer::IpcServer(uint16_t port, const std::string& unix_path)
     : port_(port), unix_path_(unix_path)
@@ -187,4 +191,5 @@ void IpcServer::listener_thread_loop() {
 #endif
 }
 
-} // namespace noiselessx::runtime
+} // namespace runtime
+} // namespace noiselessx

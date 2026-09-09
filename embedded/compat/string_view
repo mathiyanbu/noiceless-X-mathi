@@ -1,0 +1,19 @@
+#pragma once
+#include "cstddef"
+#include <string.h>
+
+namespace std {
+    class string_view {
+    public:
+        static const size_t npos = static_cast<size_t>(-1);
+        constexpr string_view() noexcept : data_(nullptr), size_(0) {}
+        constexpr string_view(const char* s, size_t count) : data_(s), size_(count) {}
+        string_view(const char* s) : data_(s), size_(s ? strlen(s) : 0) {}
+        constexpr const char* data() const noexcept { return data_; }
+        constexpr size_t size() const noexcept { return size_; }
+        constexpr bool empty() const noexcept { return size_ == 0; }
+    private:
+        const char* data_;
+        size_t size_;
+    };
+}

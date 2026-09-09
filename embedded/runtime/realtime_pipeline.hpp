@@ -19,7 +19,8 @@
 #include <chrono>
 #include <memory>
 
-namespace noiselessx::runtime {
+namespace noiselessx {
+namespace runtime {
 
 /**
  * @brief Real-time performance metrics and latency breakdown.
@@ -173,4 +174,5 @@ private:
     std::chrono::steady_clock::time_point last_system_sample_time_;
 };
 
-} // namespace noiselessx::runtime
+} // namespace runtime
+} // namespace noiselessx

@@ -5,7 +5,8 @@
 #include <string>
 #include <array>
 
-namespace noiselessx::impulse {
+namespace noiselessx {
+namespace impulse {
 
 /**
  * @brief Extracted feature vector for impulsive noise detection (8 features).
@@ -60,7 +61,8 @@ struct ImpulseState {
     float release_gain{1.0f};  // Smoothed recovery gain envelope in [0.0, 1.0]
 };
 
-} // namespace noiselessx::impulse
+} // namespace impulse
+} // namespace noiselessx
 
 // Global alias for seamless accessibility
 using ImpulseState = noiselessx::impulse::ImpulseState;

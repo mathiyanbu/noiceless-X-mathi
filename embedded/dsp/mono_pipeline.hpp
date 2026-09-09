@@ -7,7 +7,8 @@
 #include <functional>
 #include <span>
 
-namespace noiselessx::dsp {
+namespace noiselessx {
+namespace dsp {
 
 /**
  * @brief Complete Single-Channel (Mono) Preprocessing and STFT/iSTFT Pipeline.
@@ -68,4 +69,5 @@ private:
     SpectralFrame spectral_frame_;
 };
 
-} // namespace noiselessx::dsp
+} // namespace dsp
+} // namespace noiselessx

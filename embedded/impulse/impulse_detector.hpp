@@ -7,7 +7,8 @@
 #include <memory>
 #include <string>
 
-namespace noiselessx::impulse {
+namespace noiselessx {
+namespace impulse {
 
 /**
  * @brief Real-time single-channel impulsive noise detector.
@@ -91,4 +92,5 @@ private:
     std::unique_ptr<OnnxBackend> onnx_backend_;
 };
 
-} // namespace noiselessx::impulse
+} // namespace impulse
+} // namespace noiselessx

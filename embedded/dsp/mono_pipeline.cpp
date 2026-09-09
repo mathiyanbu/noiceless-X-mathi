@@ -1,7 +1,8 @@
 #include "mono_pipeline.hpp"
 #include <algorithm>
 
-namespace noiselessx::dsp {
+namespace noiselessx {
+namespace dsp {
 
 MonoPipeline::MonoPipeline(
     float sample_rate,
@@ -73,4 +74,5 @@ void MonoPipeline::process_hop(
     );
 }
 
-} // namespace noiselessx::dsp
+} // namespace dsp
+} // namespace noiselessx

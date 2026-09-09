@@ -5,7 +5,8 @@
 #include <algorithm>
 #include <stdexcept>
 
-namespace noiselessx::dsp {
+namespace noiselessx {
+namespace dsp {
 
 StftEngine::StftEngine(size_t fft_size, size_t hop_size) {
     initialize(fft_size, hop_size);
@@ -242,4 +243,5 @@ void StftEngine::reset() {
     std::fill(accum_weight_buffer_.begin(), accum_weight_buffer_.end(), 0.0f);
 }
 
-} // namespace noiselessx::dsp
+} // namespace dsp
+} // namespace noiselessx

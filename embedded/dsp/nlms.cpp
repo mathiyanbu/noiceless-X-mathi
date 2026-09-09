@@ -2,7 +2,8 @@
 #include <cmath>
 #include <algorithm>
 
-namespace noiselessx::dsp {
+namespace noiselessx {
+namespace dsp {
 
 NLMSFilter::NLMSFilter(int filter_length, float learning_rate, float epsilon) {
     initialize(filter_length, learning_rate, epsilon);
@@ -91,4 +92,5 @@ void NLMSFilter::process_block(const float* primary, const float* reference, flo
     }
 }
 
-} // namespace noiselessx::dsp
+} // namespace dsp
+} // namespace noiselessx

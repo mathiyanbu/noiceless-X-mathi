@@ -1,0 +1,62 @@
+#pragma once
+#include "cstdint"
+
+namespace std {
+    struct micro { static constexpr intmax_t num = 1; static constexpr intmax_t den = 1000000; };
+    struct milli { static constexpr intmax_t num = 1; static constexpr intmax_t den = 1000; };
+    struct nano  { static constexpr intmax_t num = 1; static constexpr intmax_t den = 1000000000; };
+
+    namespace chrono {
+        template <class Rep, class Period = void>
+        class duration {
+        public:
+            using rep = Rep;
+            constexpr duration() = default;
+            constexpr explicit duration(const Rep& r) : r_(r) {}
+            template <class Rep2, class Period2>
+            constexpr duration(const duration<Rep2, Period2>& d) : r_(static_cast<Rep>(d.count())) {}
+            constexpr Rep count() const { return r_; }
+        private:
+            Rep r_{0};
+        };
+
+        using nanoseconds  = duration<int64_t, nano>;
+        using microseconds = duration<int64_t, micro>;
+        using milliseconds = duration<int64_t, milli>;
+        using seconds      = duration<int64_t>;
+
+        template <class ToDuration, class Rep, class Period>
+        constexpr ToDuration duration_cast(const duration<Rep, Period>& d) {
+            return ToDuration(static_cast<typename ToDuration::rep>(d.count()));
+        }
+
+        template <class Clock, class Duration = typename Clock::duration>
+        class time_point {
+        public:
+            constexpr time_point() : d_() {}
+            constexpr explicit time_point(const Duration& d) : d_(d) {}
+            constexpr Duration time_since_epoch() const { return d_; }
+            friend constexpr Duration operator-(const time_point& lhs, const time_point& rhs) {
+                return Duration(lhs.d_.count() - rhs.d_.count());
+            }
+        private:
+            Duration d_;
+        };
+
+        struct steady_clock {
+            using rep = int64_t;
+            using period = nano;
+            using duration = nanoseconds;
+            using time_point = chrono::time_point<steady_clock>;
+            static time_point now() noexcept { return time_point(); }
+        };
+
+        struct system_clock {
+            using rep = int64_t;
+            using period = nano;
+            using duration = nanoseconds;
+            using time_point = chrono::time_point<system_clock>;
+            static time_point now() noexcept { return time_point(); }
+        };
+    }
+}

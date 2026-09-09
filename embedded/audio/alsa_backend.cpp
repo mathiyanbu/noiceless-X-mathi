@@ -4,7 +4,8 @@
 #include <chrono>
 #include <cmath>
 
-namespace noiselessx::audio {
+namespace noiselessx {
+namespace audio {
 
 AlsaBackend::AlsaBackend() = default;
 
@@ -422,4 +423,5 @@ AudioDeviceStatus AlsaBackend::get_status() const {
     return status_;
 }
 
-} // namespace noiselessx::audio
+} // namespace audio
+} // namespace noiselessx

@@ -1,0 +1,14 @@
+#pragma once
+#include "string"
+
+namespace std {
+    class ostream {
+    public:
+        template <typename T>
+        ostream& operator<<(const T&) { return *this; }
+    };
+
+    inline ostream cout;
+    inline ostream cerr;
+    constexpr char endl = '\n';
+}

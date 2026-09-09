@@ -9,7 +9,8 @@
 #include <algorithm>
 #include <initializer_list>
 
-namespace noiselessx::fusion {
+namespace noiselessx {
+namespace fusion {
 
 /**
  * @brief Fixed/variable size AudioFrame container representing a single processing hop/frame.
@@ -115,7 +116,8 @@ struct FusionInput {
     bool bypass_requested{false};        // Operator-triggered bypass signal
 };
 
-} // namespace noiselessx::fusion
+} // namespace fusion
+} // namespace noiselessx
 
 // Global aliases for seamless project-wide accessibility
 using AudioFrame = noiselessx::fusion::AudioFrame;

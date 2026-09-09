@@ -4,7 +4,8 @@
 #include <cmath>
 #include <span>
 
-namespace noiselessx::dsp {
+namespace noiselessx {
+namespace dsp {
 
 /**
  * @brief Real-time DC Offset Removal using running mean subtraction.
@@ -75,4 +76,5 @@ private:
     float running_mean_{0.0f};
 };
 
-} // namespace noiselessx::dsp
+} // namespace dsp
+} // namespace noiselessx

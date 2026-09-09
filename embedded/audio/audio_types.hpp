@@ -6,7 +6,8 @@
 #include <vector>
 #include <chrono>
 
-namespace noiselessx::audio {
+namespace noiselessx {
+namespace audio {
 
 enum class DeviceTopology {
     UNKNOWN = 0,
@@ -68,4 +69,5 @@ struct AudioChunk {
     uint64_t timestamp_ns{0};
 };
 
-} // namespace noiselessx::audio
+} // namespace audio
+} // namespace noiselessx

@@ -24,7 +24,8 @@ static std::wstring to_wstr(const std::string& s) {
 
 #endif
 
-namespace noiselessx::impulse {
+namespace noiselessx {
+namespace impulse {
 
 class ImpulseDetector::OnnxBackend {
 public:
@@ -311,4 +312,5 @@ void ImpulseDetector::reset() {
     current_gain_ = 1.0f;
 }
 
-} // namespace noiselessx::impulse
+} // namespace impulse
+} // namespace noiselessx

@@ -20,10 +20,21 @@
   #include <algorithm>
 #endif
 
-// Standard C headers guaranteed across all compiler environments
-#include <stddef.h>
-#include <stdint.h>
-#include <math.h>
+#if defined(__has_include)
+  #if __has_include(<stddef.h>)
+    #include <stddef.h>
+  #endif
+  #if __has_include(<stdint.h>)
+    #include <stdint.h>
+  #endif
+  #if __has_include(<math.h>)
+    #include <math.h>
+  #endif
+#else
+  #include <stddef.h>
+  #include <stdint.h>
+  #include <math.h>
+#endif
 
 namespace noiselessx {
 namespace dsp {
@@ -47,6 +58,8 @@ namespace detail {
     inline float sqrt_f(float x) noexcept {
 #if defined(__has_include) && __has_include(<cmath>)
         return std::sqrt(x);
+#elif defined(__GNUC__) || defined(__clang__)
+        return __builtin_sqrtf(x);
 #else
         return ::sqrtf(x);
 #endif
@@ -55,6 +68,8 @@ namespace detail {
     inline float log10_f(float x) noexcept {
 #if defined(__has_include) && __has_include(<cmath>)
         return std::log10(x);
+#elif defined(__GNUC__) || defined(__clang__)
+        return __builtin_log10f(x);
 #else
         return ::log10f(x);
 #endif
@@ -63,6 +78,8 @@ namespace detail {
     inline double log10_d(double x) noexcept {
 #if defined(__has_include) && __has_include(<cmath>)
         return std::log10(x);
+#elif defined(__GNUC__) || defined(__clang__)
+        return __builtin_log10(x);
 #else
         return ::log10(x);
 #endif

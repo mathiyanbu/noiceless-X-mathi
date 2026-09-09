@@ -9,7 +9,8 @@
 #include <sched.h>
 #endif
 
-namespace noiselessx::runtime {
+namespace noiselessx {
+namespace runtime {
 
 RealtimePipeline::RealtimePipeline(const PipelineConfig& config)
     : config_(config),
@@ -345,4 +346,5 @@ PipelineTelemetry RealtimePipeline::get_telemetry() {
     return telemetry_;
 }
 
-} // namespace noiselessx::runtime
+} // namespace runtime
+} // namespace noiselessx
