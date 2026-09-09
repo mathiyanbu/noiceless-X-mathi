@@ -22,7 +22,7 @@ endif()
 
 # Common compilation flags
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    add_compile_options(-Wall -Wextra -Wpedantic -Wconversion)
+    add_compile_options(-Wall -Wextra -Wpedantic)
 elseif(MSVC)
     add_compile_options(/W4 /EHsc /utf-8)
 endif()
@@ -88,6 +88,8 @@ endif()
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/embedded
+    ${CMAKE_CURRENT_SOURCE_DIR}/embedded/dsp
+    ${CMAKE_CURRENT_SOURCE_DIR}/embedded/dsp/pffft
     ${CMAKE_CURRENT_SOURCE_DIR}/config
 )
 
@@ -96,7 +98,26 @@ add_library(noiselessx_core INTERFACE)
 target_include_directories(noiselessx_core INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/embedded
+    ${CMAKE_CURRENT_SOURCE_DIR}/embedded/dsp
+    ${CMAKE_CURRENT_SOURCE_DIR}/embedded/dsp/pffft
 )
+
+# DSP Subsystem Library (PFFFT + STFT + VAD + Biquad + DC Blocker + Mono Pipeline)
+set(DSP_SOURCES
+    embedded/dsp/pffft/pffft.c
+    embedded/dsp/pffft/pffft_common.c
+    embedded/dsp/stft.cpp
+    embedded/dsp/vad.cpp
+    embedded/dsp/mono_pipeline.cpp
+)
+
+add_library(noiselessx_dsp STATIC ${DSP_SOURCES})
+target_include_directories(noiselessx_dsp PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/embedded
+    ${CMAKE_CURRENT_SOURCE_DIR}/embedded/dsp
+    ${CMAKE_CURRENT_SOURCE_DIR}/embedded/dsp/pffft
+)
+target_link_libraries(noiselessx_dsp PUBLIC noiselessx_core)
 
 # Audio Subsystem Library
 set(AUDIO_SOURCES
@@ -106,10 +127,10 @@ set(AUDIO_SOURCES
 
 add_library(noiselessx_audio STATIC ${AUDIO_SOURCES})
 target_include_directories(noiselessx_audio PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/embedded
+    ${CMAKE_CURRENT_SOURCE_DIR}/embedded/audio
 )
-target_link_libraries(noiselessx_audio PUBLIC noiselessx_core)
+target_link_libraries(noiselessx_audio PUBLIC noiselessx_core noiselessx_dsp)
 
 if(ENABLE_ALSA AND ALSA_FOUND)
     target_link_libraries(noiselessx_audio PUBLIC ${ALSA_LIBRARIES})
@@ -124,7 +145,7 @@ endif()
 # Hardware Test Utility (built when ALSA is enabled or on Linux target)
 if(ENABLE_ALSA)
     add_executable(audio_test tools/audio_test.cpp)
-    target_link_libraries(audio_test PRIVATE noiselessx_audio noiselessx_core)
+    target_link_libraries(audio_test PRIVATE noiselessx_audio noiselessx_dsp noiselessx_core)
 endif()
 
 # Testing Scaffolding with GoogleTest
@@ -140,14 +161,16 @@ if(BUILD_TESTS)
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
 
-    # Unit test executable covering lock-free ring buffers, drift detection, and sanity
+    # Unit test executable covering lock-free ring buffers, drift detection, and DSP pipeline
     add_executable(noiselessx_unit_tests
         tests/unit/test_sanity.cpp
         tests/unit/test_ring_buffer.cpp
         tests/unit/test_drift_detector.cpp
+        tests/unit/test_dsp.cpp
     )
 
     target_link_libraries(noiselessx_unit_tests PRIVATE
+        noiselessx_dsp
         noiselessx_audio
         noiselessx_core
         GTest::gtest_main
