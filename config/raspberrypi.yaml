@@ -1,0 +1,52 @@
+# SIH26052 — NOICELESSX: Raspberry Pi 4/5 Deployment Configuration
+# Target: Raspberry Pi OS 64-bit (Debian 12), Dual Hardware Mics
+
+audio:
+  sample_rate: 16000
+  channels: 1
+  frame_ms: 10
+  hop_ms: 5
+  fft_size: 512
+  # Primary microphone (headphone / headset mic — picks up speech + ambient noise)
+  input_device: "hw:CARD=Headset,DEV=0"
+  # Reference microphone (error mic — picks up acoustic noise / residual reference)
+  reference_device: "hw:CARD=ErrorMic,DEV=0"
+  # Playback device
+  output_device: "hw:CARD=Headset,DEV=0"
+  buffer_frames: 160
+  periods: 4
+
+ai:
+  model_path: "models/onnx/speech_enhancer_int8.onnx"
+  execution_provider: "CPUExecutionProvider"
+  intra_op_num_threads: 2
+  inter_op_num_threads: 1
+  enable_neon_simd: true
+
+nlms:
+  # Dual-mic adaptive filtering is enabled by default (no deferred branch)
+  enabled: true
+  filter_length: 256
+  step_size: 0.05
+  leakage: 0.0001
+  eps: 1e-6
+
+impulse:
+  enabled: true
+  threshold_db: 18.0
+  decay_ratio: 0.95
+
+fusion:
+  spectral_alpha: 0.7
+  smoothing_factor: 0.9
+
+diagnostics:
+  thermal_cmd: "vcgencmd measure_temp"
+  target_latency_ms: 15.0
+  max_acceptable_cpu_pct: 75.0
+
+telemetry:
+  host: "0.0.0.0"
+  port: 8000
+  ws_endpoint: "/ws/telemetry"
+  push_interval_ms: 50

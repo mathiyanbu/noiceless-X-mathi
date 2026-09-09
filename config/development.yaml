@@ -1,0 +1,50 @@
+# SIH26052 — NOICELESSX: Local Development / Workstation Configuration
+# Target: Host developer machines (Linux/macOS/Windows) for offline testing & compilation
+
+audio:
+  sample_rate: 16000
+  channels: 1
+  frame_ms: 10
+  hop_ms: 5
+  fft_size: 512
+  # Host fallback devices
+  input_device: "default"
+  reference_device: "default"
+  output_device: "default"
+  buffer_frames: 160
+  periods: 4
+
+ai:
+  model_path: "models/onnx/speech_enhancer_int8.onnx"
+  execution_provider: "CPUExecutionProvider"
+  intra_op_num_threads: 2
+  inter_op_num_threads: 1
+  enable_neon_simd: false
+
+nlms:
+  # Dual-mic active by default
+  enabled: true
+  filter_length: 256
+  step_size: 0.05
+  leakage: 0.0001
+  eps: 1e-6
+
+impulse:
+  enabled: true
+  threshold_db: 18.0
+  decay_ratio: 0.95
+
+fusion:
+  spectral_alpha: 0.7
+  smoothing_factor: 0.9
+
+diagnostics:
+  thermal_cmd: ""
+  target_latency_ms: 20.0
+  max_acceptable_cpu_pct: 80.0
+
+telemetry:
+  host: "127.0.0.1"
+  port: 8000
+  ws_endpoint: "/ws/telemetry"
+  push_interval_ms: 50
