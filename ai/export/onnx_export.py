@@ -64,7 +64,11 @@ def export_onnx_model(
     if checkpoint_path and Path(checkpoint_path).exists():
         if verbose:
             print(f"[Step 1] Loading weights from checkpoint: {checkpoint_path}")
-        state_dict = torch.load(checkpoint_path, map_location="cpu")
+        checkpoint = torch.load(checkpoint_path, map_location="cpu")
+        if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
+            state_dict = checkpoint["model_state_dict"]
+        else:
+            state_dict = checkpoint
         model.load_state_dict(state_dict)
     else:
         if verbose:

@@ -1,0 +1,12 @@
+{
+  "num_test_samples": 10,
+  "mean_snr_in_db": 3.8438388925518865,
+  "mean_snr_out_db": -1.2189582707896327,
+  "mean_delta_snr_db": -5.062797163341519,
+  "mean_sisnr_in_db": 4.605537503357189,
+  "mean_sisnr_out_db": -0.15553336085305164,
+  "mean_delta_sisnr_db": -4.761070864210241,
+  "mean_stoi": 0.6235953074941166,
+  "mean_pesq": null,
+  "pesq_status": "uncompiled_on_windows_platform"
+}
