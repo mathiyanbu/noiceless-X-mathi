@@ -8,7 +8,7 @@
   <a href="https://isocpp.org/"><img src="https://img.shields.io/badge/c%2B%2B-17%20standard-c084fc?style=for-the-badge&logo=c%2B%2B&logoColor=white" alt="C++17"></a>
   <a href="https://www.raspberrypi.com/"><img src="https://img.shields.io/badge/target-Raspberry%20Pi%204%2F5%20(ARM64)-ff007f?style=for-the-badge&logo=raspberry-pi&logoColor=white" alt="Hardware Target"></a>
   <a href="https://onnxruntime.ai/"><img src="https://img.shields.io/badge/inference-ONNX%20Runtime%20INT8-f59e0b?style=for-the-badge&logo=onnx&logoColor=white" alt="ONNX Runtime"></a>
-  <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-MIT-34d399?style=for-the-badge" alt="License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-34d399?style=for-the-badge" alt="License"></a>
 </p>
 
 ---
@@ -602,8 +602,8 @@ If you utilize the NOICELESS-X architecture, dual-path hybrid controller, or ben
 
 ## ⚖️ License
 
-Distributed under the **MIT License**. See [`LICENSE.md`](LICENSE.md) for complete details.  
-Individual research datasets used during training and benchmarking remain subject to their respective non-commercial academic licenses cataloged in [`DATASET_LICENSES.md`](DATASET_LICENSES.md).
+Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for complete details.  
+Individual research datasets used during training and benchmarking remain subject to their respective non-commercial academic licenses cataloged in [`docs/DATASET_LICENSES.md`](docs/DATASET_LICENSES.md).
 
 <p align="center">
   <sub>Engineered with precision for Smart India Hackathon (SIH26052). Built for real-world acoustic reliability.</sub>
