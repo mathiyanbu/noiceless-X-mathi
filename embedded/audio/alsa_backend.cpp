@@ -7,7 +7,8 @@
 namespace noiselessx {
 namespace audio {
 
-AlsaBackend::AlsaBackend() = default;
+AlsaBackend::AlsaBackend()
+    : drift_detector_(16000, 10.0) {}
 
 AlsaBackend::~AlsaBackend() {
     stop();
@@ -15,7 +16,6 @@ AlsaBackend::~AlsaBackend() {
 
 bool AlsaBackend::initialize(const AudioConfig& config) {
     config_ = config;
-    drift_detector_ = DriftDetector(config.sample_rate, config.max_allowable_drift_ms);
     status_ = AudioDeviceStatus{};
     status_.primary_device_name = config.primary_device;
     status_.reference_device_name = config.reference_device;
