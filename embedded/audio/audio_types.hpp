@@ -11,6 +11,7 @@ namespace audio {
 
 enum class DeviceTopology {
     UNKNOWN = 0,
+    SINGLE_MIC,
     SINGLE_DEVICE_MULTICHANNEL,
     TWO_SEPARATE_DEVICES
 };
@@ -30,6 +31,9 @@ struct AudioDeviceInfo {
 struct AudioConfig {
     uint32_t sample_rate{16000};
     uint32_t channels{1}; // per-stream channel count (typically 1 for mono speech)
+    uint32_t fft_size{512};
+    uint32_t hardware_sample_rate{16000};
+    uint32_t hardware_channels{1};
     uint32_t frame_ms{10};
     uint32_t hop_ms{5};
     uint32_t period_size{160}; // 10ms at 16kHz
@@ -37,6 +41,8 @@ struct AudioConfig {
     std::string primary_device{"hw:CARD=Headset,DEV=0"};
     std::string reference_device{"hw:CARD=ErrorMic,DEV=0"};
     std::string output_device{"hw:CARD=Headset,DEV=0"};
+    bool single_mic{false};
+    bool nlms_enabled{true};
     double max_allowable_drift_ms{10.0};
 };
 

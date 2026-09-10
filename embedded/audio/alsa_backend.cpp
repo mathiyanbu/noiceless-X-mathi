@@ -28,7 +28,11 @@ bool AlsaBackend::initialize(const AudioConfig& config) {
 #else
 
     // 1. Detect device topology
-    if (config.primary_device == config.reference_device && !config.primary_device.empty()) {
+    if (config.single_mic || config.reference_device.empty() || config.reference_device == "disabled" || config.reference_device == "null") {
+        status_.topology = DeviceTopology::SINGLE_MIC;
+        std::cout << "[AlsaBackend] Topology: SINGLE_MIC detected (left channel only).\n"
+                  << "  Primary: " << config.primary_device << "\n";
+    } else if (config.primary_device == config.reference_device && !config.primary_device.empty()) {
         status_.topology = DeviceTopology::SINGLE_DEVICE_MULTICHANNEL;
         std::cout << "[AlsaBackend] Topology: SINGLE_DEVICE_MULTICHANNEL detected ("
                   << config.primary_device << "). Ch0 = Primary, Ch1 = Reference.\n";
@@ -39,12 +43,28 @@ bool AlsaBackend::initialize(const AudioConfig& config) {
                   << "  Reference: " << config.reference_device << "\n";
     }
 
-    uint32_t negotiated_rate = config.sample_rate;
+    uint32_t negotiated_rate = config.hardware_sample_rate;
     snd_pcm_uframes_t negotiated_period = config.period_size;
     snd_pcm_uframes_t negotiated_buffer = config.buffer_size;
+    if (config.hardware_sample_rate != config.sample_rate) {
+        const uint32_t rate_ratio = config.hardware_sample_rate / config.sample_rate;
+        if (rate_ratio == 0 || config.hardware_sample_rate % config.sample_rate != 0) {
+            std::cerr << "[AlsaBackend] Unsupported non-integer hardware/internal sample-rate ratio.\n";
+            return false;
+        }
+        negotiated_period *= rate_ratio;
+        negotiated_buffer *= rate_ratio;
+    }
 
     // 2. Open and configure Capture Device(s)
-    if (status_.topology == DeviceTopology::SINGLE_DEVICE_MULTICHANNEL) {
+    if (status_.topology == DeviceTopology::SINGLE_MIC) {
+        // VoiceHAT capture is hardware-rate, interleaved S32_LE stereo. Channel 0 is retained.
+        if (!configure_pcm_handle(&pcm_primary_, config.primary_device, SND_PCM_STREAM_CAPTURE,
+                                 config.hardware_channels, negotiated_rate, negotiated_period, negotiated_buffer,
+                                 "Single microphone capture", SND_PCM_FORMAT_S32_LE)) {
+            return false;
+        }
+    } else if (status_.topology == DeviceTopology::SINGLE_DEVICE_MULTICHANNEL) {
         // Open combined capture device with 2 channels
         if (!configure_pcm_handle(&pcm_primary_, config.primary_device, SND_PCM_STREAM_CAPTURE,
                                  2, negotiated_rate, negotiated_period, negotiated_buffer,
@@ -110,7 +130,8 @@ bool AlsaBackend::configure_pcm_handle(
     uint32_t& actual_rate,
     snd_pcm_uframes_t& actual_period,
     snd_pcm_uframes_t& actual_buffer,
-    const std::string& role_label
+    const std::string& role_label,
+    snd_pcm_format_t format
 ) {
     int err = snd_pcm_open(pcm, dev_name.c_str(), stream_type, 0);
     if (err < 0) {
@@ -138,9 +159,9 @@ bool AlsaBackend::configure_pcm_handle(
         return false;
     }
 
-    err = snd_pcm_hw_params_set_format(*pcm, hw_params, SND_PCM_FORMAT_S16_LE);
+    err = snd_pcm_hw_params_set_format(*pcm, hw_params, format);
     if (err < 0) {
-        std::cerr << role_label << " S16_LE format unsupported: " << snd_strerror(err) << "\n";
+        std::cerr << role_label << " requested PCM format unsupported: " << snd_strerror(err) << "\n";
         snd_pcm_close(*pcm);
         *pcm = nullptr;
         return false;
@@ -211,6 +232,12 @@ bool AlsaBackend::start() {
     std::cerr << "[AlsaBackend] Cannot start: ALSA is not enabled.\n";
     return false;
 #else
+    if (!pcm_primary_ || !pcm_playback_) {
+        if (!initialize(config_)) {
+            return false;
+        }
+    }
+
     if (!pcm_primary_ || !pcm_playback_ ||
         (status_.topology == DeviceTopology::TWO_SEPARATE_DEVICES && !pcm_reference_)) {
         std::cerr << "[AlsaBackend] Cannot start: Devices not properly initialized.\n";
@@ -222,7 +249,10 @@ bool AlsaBackend::start() {
     status_.is_running = true;
 
     // Launch realtime capture threads
-    if (status_.topology == DeviceTopology::SINGLE_DEVICE_MULTICHANNEL) {
+    primary_decimator_.reset();
+    if (status_.topology == DeviceTopology::SINGLE_MIC) {
+        unified_capture_thread_ = std::thread(&AlsaBackend::single_microphone_capture_thread_loop, this, pcm_primary_);
+    } else if (status_.topology == DeviceTopology::SINGLE_DEVICE_MULTICHANNEL) {
         unified_capture_thread_ = std::thread(&AlsaBackend::unified_multichannel_capture_thread_loop, this, pcm_primary_);
     } else {
         primary_capture_thread_ = std::thread(&AlsaBackend::capture_thread_loop, this, pcm_primary_, std::ref(primary_ring_buffer_), true);
@@ -240,6 +270,13 @@ void AlsaBackend::stop() {
     if (!is_running_.load()) return;
 
     should_stop_.store(true);
+
+#if NOICELESSX_HAS_ALSA
+    // Interrupt blocking read/write calls before joining their worker threads.
+    if (pcm_primary_) snd_pcm_drop(pcm_primary_);
+    if (pcm_reference_) snd_pcm_drop(pcm_reference_);
+    if (pcm_playback_) snd_pcm_drop(pcm_playback_);
+#endif
 
     if (primary_capture_thread_.joinable()) primary_capture_thread_.join();
     if (reference_capture_thread_.joinable()) reference_capture_thread_.join();
@@ -375,6 +412,50 @@ void AlsaBackend::unified_multichannel_capture_thread_loop(snd_pcm_t* pcm) {
     }
 }
 
+void AlsaBackend::single_microphone_capture_thread_loop(snd_pcm_t* pcm) {
+    const size_t period_frames = status_.negotiated_period_size > 0 ? status_.negotiated_period_size : 480;
+    int32_t interleaved_buffer[2048];
+    float left_channel[1024];
+    float resampled[1024];
+    uint64_t frame_index = 0;
+
+    if (snd_pcm_start(pcm) < 0) {
+        std::cerr << "[AlsaBackend] Failed to start single-microphone capture.\n";
+        return;
+    }
+
+    while (!should_stop_.load(std::memory_order_relaxed)) {
+        snd_pcm_sframes_t frames = snd_pcm_readi(pcm, interleaved_buffer, period_frames);
+        if (frames < 0) {
+            const int err = snd_pcm_recover(pcm, static_cast<int>(frames), 0);
+            status_.primary_xrun_count++;
+            if (err < 0) {
+                std::cerr << "[AlsaBackend] Unrecoverable single-mic XRUN: " << snd_strerror(err) << "\n";
+            }
+            continue;
+        }
+        if (frames == 0) continue;
+
+        const size_t input_frames = static_cast<size_t>(frames);
+        for (size_t i = 0; i < input_frames; ++i) {
+            left_channel[i] = static_cast<float>(interleaved_buffer[2 * i]) / 2147483648.0f;
+        }
+        const size_t output_frames = primary_decimator_.process(
+            left_channel, input_frames, resampled, sizeof(resampled) / sizeof(resampled[0]));
+        if (output_frames == 0) continue;
+
+        AudioChunk<1024> chunk;
+        chunk.count = output_frames;
+        chunk.frame_index = frame_index++;
+        chunk.timestamp_ns = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count());
+        std::memcpy(chunk.samples, resampled, output_frames * sizeof(float));
+        primary_ring_buffer_.push(chunk);
+        status_.primary_frames_captured += output_frames;
+    }
+}
+
 void AlsaBackend::playback_thread_loop(snd_pcm_t* pcm) {
     AudioChunk<1024> chunk;
     int16_t out_buffer[1024];
@@ -386,15 +467,20 @@ void AlsaBackend::playback_thread_loop(snd_pcm_t* pcm) {
                 out_buffer[i] = static_cast<int16_t>(clamped * 32767.0f);
             }
 
-            snd_pcm_sframes_t written = snd_pcm_writei(pcm, out_buffer, chunk.count);
-            if (written < 0) {
-                int err = snd_pcm_recover(pcm, static_cast<int>(written), 0);
-                status_.output_xrun_count++;
-                if (err < 0) {
-                    std::cerr << "[AlsaBackend] Playback XRUN recovery error: " << snd_strerror(err) << "\n";
+            size_t offset = 0;
+            while (offset < chunk.count && !should_stop_.load(std::memory_order_relaxed)) {
+                snd_pcm_sframes_t written = snd_pcm_writei(pcm, out_buffer + offset, chunk.count - offset);
+                if (written < 0) {
+                    int err = snd_pcm_recover(pcm, static_cast<int>(written), 0);
+                    status_.output_xrun_count++;
+                    if (err < 0) {
+                        std::cerr << "[AlsaBackend] Playback XRUN recovery error: " << snd_strerror(err) << "\n";
+                        break;
+                    }
+                } else if (written > 0) {
+                    offset += static_cast<size_t>(written);
+                    status_.output_frames_written += static_cast<uint64_t>(written);
                 }
-            } else {
-                status_.output_frames_written += static_cast<uint64_t>(written);
             }
         } else {
             // Buffer underrun / waiting for DSP frames

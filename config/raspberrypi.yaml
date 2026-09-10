@@ -1,18 +1,21 @@
 # SIH26052 — NOICELESSX: Raspberry Pi 4/5 Deployment Configuration
-# Target: Raspberry Pi OS 64-bit (Debian 12), Dual Hardware Mics
+# Target: Raspberry Pi OS 64-bit (Debian 12), VoiceHAT single-microphone capture
 
 audio:
   sample_rate: 16000
   channels: 1
+  hardware_sample_rate: 48000
+  hardware_channels: 2
   frame_ms: 10
   hop_ms: 5
   fft_size: 512
-  # Primary microphone (headphone / headset mic — picks up speech + ambient noise)
-  input_device: "hw:CARD=Headset,DEV=0"
-  # Reference microphone (error mic — picks up acoustic noise / residual reference)
-  reference_device: "hw:CARD=ErrorMic,DEV=0"
-  # Playback device
-  output_device: "hw:CARD=Headset,DEV=0"
+  # VoiceHAT: S32_LE / 48 kHz / 2 channels. The runtime keeps channel 0 only.
+  input_device: "hw:CARD=sndrpigooglevoi,DEV=0"
+  reference_device: "disabled"
+  single_mic: true
+  # USB PnP Sound Device (card 3, stable ALSA card name "Device"). The plug
+  # plugin converts the internal mono 16 kHz stream for the USB stereo device.
+  output_device: "plughw:CARD=Device,DEV=0"
   buffer_frames: 160
   periods: 4
 
@@ -24,8 +27,8 @@ ai:
   enable_neon_simd: true
 
 nlms:
-  # Dual-mic adaptive filtering is enabled by default (no deferred branch)
-  enabled: true
+  # No physical reference microphone is installed for this deployment.
+  enabled: false
   filter_length: 256
   learning_rate: 0.05
   step_size: 0.05

@@ -49,6 +49,11 @@ bool parse_yaml_config(const std::string& filepath, RealtimePipeline::PipelineCo
 
     std::string line;
     std::string current_section;
+    auto parse_bool = [](const std::string& value, bool fallback) {
+        if (value == "true" || value == "1" || value == "yes") return true;
+        if (value == "false" || value == "0" || value == "no") return false;
+        return fallback;
+    };
 
     while (std::getline(file, line)) {
         auto first = line.find_first_not_of(" \t\r\n");
@@ -79,18 +84,23 @@ bool parse_yaml_config(const std::string& filepath, RealtimePipeline::PipelineCo
             if (current_section == "audio") {
                 if (key == "sample_rate") config.audio.sample_rate = std::stoul(val);
                 else if (key == "channels") config.audio.channels = std::stoul(val);
+                else if (key == "hardware_sample_rate") config.audio.hardware_sample_rate = std::stoul(val);
+                else if (key == "hardware_channels") config.audio.hardware_channels = std::stoul(val);
                 else if (key == "frame_ms") config.audio.frame_ms = std::stoul(val);
                 else if (key == "hop_ms") config.audio.hop_ms = std::stoul(val);
+                else if (key == "fft_size") config.audio.fft_size = std::stoul(val);
                 else if (key == "buffer_frames") config.audio.period_size = std::stoul(val);
                 else if (key == "periods") config.audio.buffer_size = config.audio.period_size * std::stoul(val);
                 else if (key == "input_device") config.audio.primary_device = val;
                 else if (key == "reference_device") config.audio.reference_device = val;
                 else if (key == "output_device") config.audio.output_device = val;
+                else if (key == "single_mic") config.audio.single_mic = parse_bool(val, config.audio.single_mic);
             } else if (current_section == "ai") {
                 if (key == "model_path") config.onnx_model_path = val;
                 else if (key == "intra_op_num_threads") config.ai_threads = std::stoi(val);
             } else if (current_section == "nlms") {
-                if (key == "filter_length") config.nlms_filter_length = std::stoi(val);
+                if (key == "enabled") config.audio.nlms_enabled = parse_bool(val, config.audio.nlms_enabled);
+                else if (key == "filter_length") config.nlms_filter_length = std::stoi(val);
                 else if (key == "learning_rate" || key == "step_size") config.nlms_learning_rate = std::stof(val);
                 else if (key == "epsilon" || key == "eps") config.nlms_epsilon = std::stof(val);
             } else if (current_section == "impulse") {
@@ -148,6 +158,7 @@ void print_device_validation_status(const AudioConfig& config) {
     std::cout << "  [Playback DAC]  (Headphone Output): " << config.output_device << "\n";
     std::cout << "  [Sampling Rate] " << config.sample_rate << " Hz | Hop: " 
               << (config.period_size / 2) << " samples (" << config.hop_ms << " ms)\n";
+    std::cout << "  [Mode]          " << (config.single_mic ? "Single microphone" : "Dual microphone") << "\n";
     std::cout << "================================================================================\n\n";
 }
 
@@ -359,11 +370,15 @@ int main(int argc, char* argv[]) {
             ss << "{\"status\":\"ok\",\"config\":{"
                << "\"sample_rate\":" << pipeline_config.audio.sample_rate << ","
                << "\"channels\":" << pipeline_config.audio.channels << ","
+               << "\"hardware_sample_rate\":" << pipeline_config.audio.hardware_sample_rate << ","
+               << "\"hardware_channels\":" << pipeline_config.audio.hardware_channels << ","
                << "\"frame_ms\":" << pipeline_config.audio.frame_ms << ","
                << "\"hop_ms\":" << pipeline_config.audio.hop_ms << ","
                << "\"primary_device\":\"" << pipeline_config.audio.primary_device << "\","
                << "\"reference_device\":\"" << pipeline_config.audio.reference_device << "\","
                << "\"output_device\":\"" << pipeline_config.audio.output_device << "\","
+               << "\"single_mic\":" << (pipeline_config.audio.single_mic ? "true" : "false") << ","
+               << "\"nlms_enabled\":" << (pipeline_config.audio.nlms_enabled ? "true" : "false") << ","
                << "\"period_size\":" << pipeline_config.audio.period_size << ","
                << "\"buffer_size\":" << pipeline_config.audio.buffer_size
                << "}}";

@@ -3,6 +3,7 @@
 #include "audio_types.hpp"
 #include "ring_buffer.hpp"
 #include "drift_detector.hpp"
+#include "decimator.hpp"
 #include <memory>
 #include <thread>
 #include <atomic>
@@ -94,11 +95,13 @@ private:
         uint32_t& actual_rate,
         snd_pcm_uframes_t& actual_period,
         snd_pcm_uframes_t& actual_buffer,
-        const std::string& role_label
+        const std::string& role_label,
+        snd_pcm_format_t format = SND_PCM_FORMAT_S16_LE
     );
 
     void capture_thread_loop(snd_pcm_t* pcm, SpscRingBuffer<AudioChunk<1024>, 64>& ring_buf, bool is_primary);
     void unified_multichannel_capture_thread_loop(snd_pcm_t* pcm);
+    void single_microphone_capture_thread_loop(snd_pcm_t* pcm);
     void playback_thread_loop(snd_pcm_t* pcm);
 
     snd_pcm_t* pcm_primary_{nullptr};
@@ -109,6 +112,7 @@ private:
     AudioConfig config_;
     mutable AudioDeviceStatus status_;
     DriftDetector drift_detector_;
+    Decimator3 primary_decimator_;
 
     // Lock-free bounded ring buffers for audio streams (zero allocation in audio thread)
     SpscRingBuffer<AudioChunk<1024>, 64> primary_ring_buffer_;

@@ -47,11 +47,15 @@ class AudioDeviceItem(BaseModel):
 class AudioConfigInfo(BaseModel):
     sample_rate: int = 16000
     channels: int = 1
+    hardware_sample_rate: int = 16000
+    hardware_channels: int = 1
     frame_ms: int = 10
     hop_ms: int = 5
     primary_device: str = "hw:CARD=Headset,DEV=0"
     reference_device: str = "hw:CARD=ErrorMic,DEV=0"
     output_device: str = "hw:CARD=Headset,DEV=0"
+    single_mic: bool = False
+    nlms_enabled: bool = True
     period_size: int = 160
     buffer_size: int = 640
 

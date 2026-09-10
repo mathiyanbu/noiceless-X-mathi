@@ -58,7 +58,7 @@ bool RealtimePipeline::initialize() {
 
     // 3. Initialize Impulsive Noise Detector
     std::cout << "[RealtimePipeline] Step 3: Initializing Impulsive Noise Detector...\n";
-    if (!impulse_detector_.initialize(config_.impulse.onnx_model_path)) {
+    if (!impulse_detector_.initialize_onnx(config_.impulse.onnx_model_path)) {
         std::cout << "[RealtimePipeline]   Impulse Detector fallback: Using calibrated logistic regression weights.\n";
     }
 
@@ -108,6 +108,8 @@ bool RealtimePipeline::start() {
 
     std::cout << "[RealtimePipeline] Starting real-time audio threads...\n";
 
+    reset();
+
     // 1. Start ALSA capture and playback threads
     if (!alsa_backend_.start()) {
         std::cerr << "[RealtimePipeline] Error: Failed to start ALSA audio capture/playback threads.\n";
@@ -149,6 +151,7 @@ void RealtimePipeline::set_bypass(bool bypass) {
 void RealtimePipeline::reset() {
     dc_blocker_.reset();
     high_pass_.configure(config_.highpass_cutoff_hz, config_.audio.sample_rate, 0.707f);
+    stft_primary_.reset();
     vad_.reset();
     nlms_.reset();
     fusion_controller_.reset();
@@ -186,7 +189,7 @@ void RealtimePipeline::processing_thread_loop() {
         const double cap_us = duration<double, std::micro>(t_cap_end - t_cap_start).count();
 
         // 2. Dequeue Reference (Error Mic) Audio Chunk
-        const bool has_ref = alsa_backend_.read_reference_chunk(reference_chunk);
+        const bool has_ref = !config_.audio.single_mic && alsa_backend_.read_reference_chunk(reference_chunk);
 
         const size_t count = std::min(primary_chunk.count, hop_size);
         if (count == 0) continue;
@@ -195,7 +198,7 @@ void RealtimePipeline::processing_thread_loop() {
         auto& drift_detector = alsa_backend_.get_drift_detector();
         const double drift_ms = drift_detector.get_drift_ms();
         const bool drift_warning = drift_detector.is_warning_active();
-        const bool nlms_available = has_ref && !drift_warning && (reference_chunk.count >= count);
+        const bool nlms_available = config_.audio.nlms_enabled && has_ref && !drift_warning && (reference_chunk.count >= count);
 
         // 4. Preprocessing: DC Removal + 80Hz Biquad High-Pass on Primary
         const auto t_prep_start = steady_clock::now();
@@ -213,9 +216,12 @@ void RealtimePipeline::processing_thread_loop() {
         const double stft_us = duration<double, std::micro>(t_stft_end - t_stft_start).count();
 
         // 6. Parallel Branch A: Impulse Detection & Voice Activity Detection
-        const auto impulse_state = impulse_detector_.process_frame(
-            std::span<const float>(primary_preproc.data(), count), spectral_frame);
-        const auto vad_decision = vad_.process(spectral_frame);
+        const auto impulse_state = impulse_detector_.detect(
+            std::span<const float>(primary_preproc.data(), count),
+            std::span<const float>(spectral_frame.magnitude.data(), spectral_frame.magnitude.size()));
+        const auto vad_decision = vad_.process_frame(
+            std::span<const float>(primary_preproc.data(), count),
+            std::span<const float>(spectral_frame.magnitude.data(), spectral_frame.magnitude.size()));
 
         // 7. Parallel Branch B: ONNX Runtime AI Speech Enhancement & iSTFT Synthesis
         const auto t_ai_start = steady_clock::now();

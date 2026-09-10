@@ -22,11 +22,15 @@ def _load_audio_config() -> AudioConfigInfo:
             return AudioConfigInfo(
                 sample_rate=audio.get("sample_rate", 16000),
                 channels=audio.get("channels", 1),
+                hardware_sample_rate=audio.get("hardware_sample_rate", audio.get("sample_rate", 16000)),
+                hardware_channels=audio.get("hardware_channels", audio.get("channels", 1)),
                 frame_ms=audio.get("frame_ms", 10),
                 hop_ms=audio.get("hop_ms", 5),
                 primary_device=audio.get("input_device", "hw:CARD=Headset,DEV=0"),
                 reference_device=audio.get("reference_device", "hw:CARD=ErrorMic,DEV=0"),
                 output_device=audio.get("output_device", "hw:CARD=Headset,DEV=0"),
+                single_mic=audio.get("single_mic", False),
+                nlms_enabled=data.get("nlms", {}).get("enabled", True),
                 period_size=audio.get("buffer_frames", 160),
                 buffer_size=audio.get("buffer_frames", 160) * audio.get("periods", 4)
             )

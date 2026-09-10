@@ -5,7 +5,7 @@ import pytest
 CONFIG_DIR = Path(__file__).resolve().parent.parent.parent / "config"
 
 def test_raspberrypi_yaml_schema():
-    """Verify config/raspberrypi.yaml contains all required dual-mic fields."""
+    """Verify the Raspberry Pi VoiceHAT single-microphone configuration."""
     config_file = CONFIG_DIR / "raspberrypi.yaml"
     assert config_file.exists(), f"Missing config file: {config_file}"
 
@@ -16,15 +16,18 @@ def test_raspberrypi_yaml_schema():
     audio = cfg["audio"]
     assert audio["sample_rate"] == 16000
     assert audio["channels"] == 1
+    assert audio["hardware_sample_rate"] == 48000
+    assert audio["hardware_channels"] == 2
     assert audio["frame_ms"] == 10
     assert audio["hop_ms"] == 5
     assert audio["fft_size"] == 512
-    assert "input_device" in audio and audio["input_device"] != ""
-    assert "reference_device" in audio and audio["reference_device"] != ""
-    assert "output_device" in audio and audio["output_device"] != ""
+    assert audio["input_device"] == "hw:CARD=sndrpigooglevoi,DEV=0"
+    assert audio["reference_device"] == "disabled"
+    assert audio["single_mic"] is True
+    assert audio["output_device"] == "plughw:CARD=Device,DEV=0"
 
     assert "nlms" in cfg, "Missing 'nlms' section in config"
-    assert cfg["nlms"]["enabled"] is True, "NLMS dual-mic mode must be active by default"
+    assert cfg["nlms"]["enabled"] is False, "NLMS must be disabled without a reference microphone"
 
 def test_development_yaml_schema():
     """Verify config/development.yaml contains matching schema for host dev."""
