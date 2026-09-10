@@ -59,6 +59,20 @@ def create_app() -> FastAPI:
         @app.get("/", include_in_schema=False)
         async def serve_index():
             return FileResponse(os.path.join(dist_dir, "index.html"))
+
+        @app.get("/favicon.svg", include_in_schema=False)
+        async def serve_favicon():
+            fav_path = os.path.join(dist_dir, "favicon.svg")
+            if os.path.exists(fav_path):
+                return FileResponse(fav_path)
+            return FileResponse(os.path.join(dist_dir, "index.html"))
+
+        @app.get("/icons.svg", include_in_schema=False)
+        async def serve_icons():
+            icons_path = os.path.join(dist_dir, "icons.svg")
+            if os.path.exists(icons_path):
+                return FileResponse(icons_path)
+            return FileResponse(os.path.join(dist_dir, "index.html"))
     else:
         @app.get("/")
         async def root():

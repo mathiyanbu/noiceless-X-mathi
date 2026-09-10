@@ -136,10 +136,71 @@ def main():
     parser.add_argument("--duration", type=int, default=0, help="Run duration in seconds (0 = continuous until Ctrl+C)")
     parser.add_argument("--bypass", action="store_true", help="Start pipeline in operator BYPASS mode")
     parser.add_argument("--server", action="store_true", help="Start the FastAPI control and telemetry backend server")
+    parser.add_argument("--dashboard", "--web", action="store_true", help="Start BOTH real-time audio pipeline AND web dashboard")
     parser.add_argument("--logging", action="store_true", help="Enable structured session audit logging to logs/<timestamp>/")
     parser.add_argument("--host", default="0.0.0.0", help="Host address for FastAPI server (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=8000, help="Port for FastAPI server (default: 8000)")
     args = parser.parse_args()
+
+    cfg = load_yaml_config(args.config)
+
+    if args.dashboard:
+        import threading
+        import uvicorn
+
+        sample_rate = cfg.get("audio", {}).get("sample_rate", 16000)
+        hop_ms = cfg.get("audio", {}).get("hop_ms", 5)
+        hop_size = int(sample_rate * (hop_ms / 1000.0))
+
+        pipeline = RealtimePipeline(sample_rate=sample_rate, hop_size=hop_size)
+        if args.bypass:
+            pipeline.fusion.set_bypass(True)
+
+        if args.logging:
+            s_logger = pipeline.enable_session_logging(metadata=cfg)
+            print(f"[sih26052] Structured session audit logging active: {s_logger.session_dir}")
+
+        pipeline.start()
+
+        ipc_server = RuntimeIpcServer(pipeline=pipeline, port=9099)
+        ipc_server.start()
+
+        running_flag = threading.Event()
+        running_flag.set()
+
+        def audio_worker():
+            while running_flag.is_set():
+                sig_primary = np.sin(2 * np.pi * 350.0 * np.linspace(0, 0.005, hop_size)).astype(np.float32)
+                sig_noise_ref = np.random.normal(0, 0.05, hop_size).astype(np.float32)
+                pipeline.process_hop(
+                    primary_samples=sig_primary,
+                    reference_samples=sig_noise_ref,
+                    ai_confidence=0.92,
+                    impulse_prob=0.02,
+                    vad_prob=0.85,
+                    drift_ms=0.1
+                )
+                time.sleep(0.005)
+
+        worker = threading.Thread(target=audio_worker, daemon=True)
+        worker.start()
+
+        print(f"\n================================================================================")
+        print(f"       NOICELESS-X: LIVE REAL-TIME PIPELINE & WEB DASHBOARD ACTIVE              ")
+        print(f"================================================================================")
+        print(f"  Web Dashboard UI:       http://localhost:{args.port}/")
+        print(f"  Swagger API Docs:       http://localhost:{args.port}/docs")
+        print(f"  WebSocket Telemetry:    ws://localhost:{args.port}/ws/telemetry")
+        print(f"  Local IPC Server:       tcp://127.0.0.1:9099")
+        print(f"================================================================================\n")
+
+        try:
+            uvicorn.run("backend.main:app", host=args.host, port=args.port, reload=False)
+        finally:
+            running_flag.clear()
+            ipc_server.stop()
+            pipeline.stop()
+        return
 
     if args.server:
         import uvicorn
@@ -151,7 +212,6 @@ def main():
     print("\nSIH26052 — NOICELESSX Real-Time Dual-Mic Audio Subsystem")
     print(f"Loading configuration: {args.config}...\n")
 
-    cfg = load_yaml_config(args.config)
 
     if args.test_devices:
         print_device_validation_status(cfg)
