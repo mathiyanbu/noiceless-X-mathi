@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <algorithm>
 #include "embedded/dsp/dc_blocker.hpp"
 #include "embedded/dsp/biquad_filter.hpp"
 #include "embedded/dsp/stft.hpp"

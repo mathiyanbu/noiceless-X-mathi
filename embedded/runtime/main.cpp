@@ -127,8 +127,7 @@ void print_device_validation_status(const AudioConfig& config) {
     std::cout << "               ALSA HARDWARE DEVICE VALIDATION & ENUMERATION                   \n";
     std::cout << "================================================================================\n";
 
-    DeviceEnumerator enumerator;
-    auto devices = enumerator.enumerate_all();
+    auto devices = DeviceEnumerator::enumerate_devices();
 
     std::cout << std::left << std::setw(6)  << "Card"
               << std::setw(8)  << "Device"
