@@ -50,7 +50,7 @@ bool RealtimePipeline::initialize() {
     const size_t hop_size = (config_.audio.period_size > 0) ? (config_.audio.period_size / 2) : 80;
     stft_primary_.initialize(config_.audio.fft_size, hop_size);
     dc_blocker_.reset();
-    high_pass_.configure(config_.highpass_cutoff_hz, config_.audio.sample_rate, 0.707f);
+    high_pass_.configure_high_pass(config_.audio.sample_rate, config_.highpass_cutoff_hz, 0.707f);
     vad_.reset();
     nlms_.reset();
     std::cout << "[RealtimePipeline]   DSP components initialized (Hop: " << hop_size 
@@ -150,7 +150,7 @@ void RealtimePipeline::set_bypass(bool bypass) {
 
 void RealtimePipeline::reset() {
     dc_blocker_.reset();
-    high_pass_.configure(config_.highpass_cutoff_hz, config_.audio.sample_rate, 0.707f);
+    high_pass_.configure_high_pass(config_.audio.sample_rate, config_.highpass_cutoff_hz, 0.707f);
     stft_primary_.reset();
     vad_.reset();
     nlms_.reset();
@@ -203,7 +203,7 @@ void RealtimePipeline::processing_thread_loop() {
         // 4. Preprocessing: DC Removal + 80Hz Biquad High-Pass on Primary
         const auto t_prep_start = steady_clock::now();
         for (size_t i = 0; i < count; ++i) {
-            float dc_clean = dc_blocker_.process(primary_chunk.samples[i]);
+            float dc_clean = dc_blocker_.process_sample(primary_chunk.samples[i]);
             primary_preproc[i] = dc_clean;
             high_pass_.process(&primary_preproc[i], 1);
         }
