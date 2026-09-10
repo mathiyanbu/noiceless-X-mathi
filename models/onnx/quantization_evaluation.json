@@ -1,0 +1,27 @@
+{
+  "quantization": {
+    "fp32_size_mb": 7.182692527770996,
+    "int8_size_mb": 4.155961990356445,
+    "compression_ratio": 1.7282859699275033,
+    "output_path": "models\\onnx\\speech_enhancer_int8.onnx"
+  },
+  "test_evaluation": {
+    "num_test_samples": 10,
+    "fp32_snr_db": -1.2183741848428664,
+    "int8_snr_db": -1.1921191140180756,
+    "delta_snr_db": 0.026255070824790838,
+    "fp32_delta_snr_db": -5.062679358151771,
+    "int8_delta_snr_db": -5.036424287326979,
+    "fp32_sisnr_out_db": -0.1553796565765288,
+    "int8_sisnr_out_db": -0.0739597029073425,
+    "delta_sisnr_db": 0.0814199536691863,
+    "fp32_stoi": 0.6236375282477509,
+    "int8_stoi": 0.6252999374481895,
+    "delta_stoi": 0.001662409200438586,
+    "fp32_pesq": null,
+    "int8_pesq": null,
+    "delta_pesq": null,
+    "max_spectral_diff": 6.437011432647705
+  },
+  "selected_model": "INT8"
+}

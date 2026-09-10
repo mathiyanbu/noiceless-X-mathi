@@ -1,0 +1,56 @@
+{
+  "hardware_info": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "processor": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+    "python_version": "3.12.10",
+    "onnxruntime_version": "1.29.0",
+    "available_providers": [
+      "AzureExecutionProvider",
+      "CPUExecutionProvider"
+    ],
+    "is_raspberry_pi": false
+  },
+  "fp32_benchmark": {
+    "model_name": "speech_enhancer_fp32.onnx",
+    "model_path": "models\\onnx\\speech_enhancer_fp32.onnx",
+    "file_size_mb": 7.182692527770996,
+    "provider": "CPUExecutionProvider",
+    "threads": 2,
+    "measured_frames": 500,
+    "mean_latency_ms": 0.6532406000769697,
+    "median_latency_ms": 0.6518000009236857,
+    "p95_latency_ms": 0.9914549948007331,
+    "p99_latency_ms": 1.2038619986560661,
+    "min_latency_ms": 0.40079999598674476,
+    "max_latency_ms": 1.8093999970005825,
+    "std_latency_ms": 0.20874112461613176,
+    "rtf": 0.13064812001539394,
+    "rtf_p95": 0.19829099896014662,
+    "throughput_fps": 1523.1396904576902,
+    "audio_hop_budget_ms": 5.0,
+    "realtime_capable": true
+  },
+  "int8_benchmark": {
+    "model_name": "speech_enhancer_int8.onnx",
+    "model_path": "models\\onnx\\speech_enhancer_int8.onnx",
+    "file_size_mb": 4.155961990356445,
+    "provider": "CPUExecutionProvider",
+    "threads": 2,
+    "measured_frames": 500,
+    "mean_latency_ms": 0.76542319971486,
+    "median_latency_ms": 0.6751000037183985,
+    "p95_latency_ms": 1.1820350038760803,
+    "p99_latency_ms": 1.4329399923735757,
+    "min_latency_ms": 0.5528999899979681,
+    "max_latency_ms": 1.8342000112170354,
+    "std_latency_ms": 0.2228315990224782,
+    "rtf": 0.153084639942972,
+    "rtf_p95": 0.23640700077521606,
+    "throughput_fps": 1301.5430573484489,
+    "audio_hop_budget_ms": 5.0,
+    "realtime_capable": true
+  },
+  "speedup_ratio": 0.8534371577975672,
+  "memory_reduction_percent": 42.13921904233086
+}

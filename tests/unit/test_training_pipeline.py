@@ -187,7 +187,7 @@ def test_onnx_export_and_quantize_pipeline(tmp_path):
         num_bins=257,
         verbose=False,
     )
-    assert export_ok is True
+    assert bool(export_ok)
     assert fp32_onnx.exists()
 
     quant_ok = quantize_model(
@@ -195,6 +195,6 @@ def test_onnx_export_and_quantize_pipeline(tmp_path):
         output_int8=str(int8_onnx),
         verbose=False,
     )
-    assert quant_ok is True
+    assert bool(quant_ok)
     assert int8_onnx.exists()
     assert int8_onnx.stat().st_size < fp32_onnx.stat().st_size

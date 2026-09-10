@@ -32,8 +32,6 @@ from ai.evaluation.metrics import (
     compute_stoi,
     compute_true_snr,
 )
-from ai.export.onnx_export import export_onnx_model
-from ai.export.onnx_quantize import quantize_model
 from ai.losses.composite_loss import CompositeEnhancementLoss
 from ai.models.complex_crn import ComplexCRN
 from ai.training.dataset import (
@@ -724,6 +722,9 @@ def train_speech_enhancer(
 
     # 7. Post-Training Automated ONNX Export & INT8 Quantization
     if export_onnx:
+        from ai.export.onnx_export import export_onnx_model
+        from ai.export.onnx_quantize import quantize_model
+
         fp32_onnx_path = "models/onnx/speech_enhancer_fp32.onnx"
         print(f"\n[Post-Training] Exporting best model to ONNX: {fp32_onnx_path}")
         export_success = export_onnx_model(

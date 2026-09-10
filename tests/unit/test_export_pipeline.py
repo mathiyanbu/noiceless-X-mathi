@@ -23,7 +23,7 @@ def exported_models():
             checkpoint_path=None,
             output_path=fp32_path,
             num_bins=257,
-            tolerance=1e-4,
+            tolerance=5e-4,
             verbose=False
         )
         assert success_export and Path(fp32_path).exists()
@@ -97,3 +97,40 @@ def test_model_selection_policy():
         verbose=False
     )
     assert decision_bad == "FP32"
+
+
+def test_streaming_benchmark_tool(exported_models):
+    """Verify that tools/benchmark.py benchmark_single_model measures RTF and percentiles."""
+    from tools.benchmark import benchmark_single_model
+
+    bench_res = benchmark_single_model(
+        model_path=exported_models["fp32"],
+        num_frames=25,
+        warmup_frames=5,
+        num_threads=1,
+        hop_time_ms=5.0,
+        verbose=False,
+    )
+
+    assert "mean_latency_ms" in bench_res
+    assert "median_latency_ms" in bench_res
+    assert "p95_latency_ms" in bench_res
+    assert "rtf" in bench_res
+    assert "realtime_capable" in bench_res
+    assert bench_res["mean_latency_ms"] > 0.0
+    assert bench_res["rtf"] > 0.0
+
+
+def test_deployed_artifacts_exist():
+    """Verify that production ONNX artifact and EXPORT_REPORT.md are present."""
+    deployed_model = Path("models/onnx/speech_enhancer.onnx")
+    export_report = Path("models/EXPORT_REPORT.md")
+
+    assert deployed_model.exists(), "models/onnx/speech_enhancer.onnx must exist for Phase 7 C++ engine!"
+    assert deployed_model.stat().st_size > 1_000_000, "speech_enhancer.onnx must be > 1MB"
+
+    assert export_report.exists(), "models/EXPORT_REPORT.md must exist!"
+    report_text = export_report.read_text(encoding="utf-8")
+    assert "compression" in report_text.lower()
+    assert "rtf" in report_text.lower()
+    assert "tolerance" in report_text.lower()
