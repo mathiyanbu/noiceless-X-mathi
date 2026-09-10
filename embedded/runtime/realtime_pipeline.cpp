@@ -204,7 +204,8 @@ void RealtimePipeline::processing_thread_loop() {
         const auto t_prep_start = steady_clock::now();
         for (size_t i = 0; i < count; ++i) {
             float dc_clean = dc_blocker_.process(primary_chunk.samples[i]);
-            primary_preproc[i] = high_pass_.process(dc_clean);
+            primary_preproc[i] = dc_clean;
+            high_pass_.process(&primary_preproc[i], 1);
         }
         const auto t_prep_end = steady_clock::now();
         const double prep_us = duration<double, std::micro>(t_prep_end - t_prep_start).count();
@@ -271,7 +272,7 @@ void RealtimePipeline::processing_thread_loop() {
             .nlms_output = noiselessx::fusion::AudioFrame(nlms_out.data(), count),
             .ai_confidence = ai_success ? 0.92f : 0.0f,
             .impulse_probability = impulse_state.probability,
-            .vad_probability = vad_decision.speech_probability,
+            .vad_probability = vad_decision.voice_probability,
             .nlms_available = nlms_available,
             .raw_input = noiselessx::fusion::AudioFrame(primary_chunk.samples, count),
             .ai_available = ai_success,
