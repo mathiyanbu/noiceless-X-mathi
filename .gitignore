@@ -68,5 +68,6 @@ errors.log
 # Raw dataset files and generated manifests
 data/raw/
 data/manifests/*.json
+data/manifests/*.csv
 !data/manifests/.gitkeep
 !data/raw/.gitkeep
