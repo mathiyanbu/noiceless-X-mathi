@@ -35,6 +35,8 @@ class DatasetEntry:
     citation: str
     license_type: str
     terms_notice: str
+    size_str: str = ""
+    notes: str = ""
     requires_consent: bool = False
     expected_sha256: Optional[str] = None
     expected_size_bytes: Optional[int] = None
@@ -44,7 +46,7 @@ class DatasetEntry:
 DATASET_REGISTRY: Dict[str, DatasetEntry] = {
     "voicebank_clean": DatasetEntry(
         id="voicebank_clean",
-        name="VoiceBank-DEMAND (Clean Speech)",
+        name="VoiceBank (VCTK subset used in VoiceBank+DEMAND)",
         category="clean_speech",
         official_url="https://datashare.ed.ac.uk/handle/10283/2791",
         download_urls=[
@@ -53,11 +55,58 @@ DATASET_REGISTRY: Dict[str, DatasetEntry] = {
         citation="Valentini-Botinhao et al., 'Investigating RNN-based speech enhancement methods for noise-robust Text-to-Speech', SSW 2016.",
         license_type="CC BY 4.0",
         terms_notice="Creative Commons Attribution 4.0. Requires citation.",
+        size_str="11,572 train / 824 test utterances, 28+2 speakers",
+        notes="The standard benchmark — use this so you can report PESQ/STOI numbers comparable to published work",
         archive_format="zip",
+    ),
+    "vctk": DatasetEntry(
+        id="vctk",
+        name="VCTK full corpus",
+        category="clean_speech",
+        official_url="https://datashare.ed.ac.uk/handle/10283/3443",
+        download_urls=[
+            "https://datashare.ed.ac.uk/download/DS_10283_3443.zip",
+        ],
+        citation="Yamagishi et al., 'CSTR VCTK Corpus: English Multi-speaker Speech Corpus for CSTR Voice Cloning Toolkit', 2019.",
+        license_type="Open Data Commons Attribution License (ODC-By) v1.0",
+        terms_notice="Attribution to CSTR, University of Edinburgh required.",
+        size_str="~44 hours, 110 speakers",
+        notes="Larger speaker pool for the AI model's generalization",
+        archive_format="zip",
+    ),
+    "librispeech": DatasetEntry(
+        id="librispeech",
+        name="LibriSpeech (train-clean-100 / train-clean-360)",
+        category="clean_speech",
+        official_url="https://www.openslr.org/12",
+        download_urls=[
+            "https://www.openslr.org/resources/12/train-clean-100.tar.gz",
+        ],
+        citation="Panayotov et al., 'Librispeech: an ASR corpus based on public domain audio books', ICASSP 2015.",
+        license_type="CC BY 4.0",
+        terms_notice="Creative Commons Attribution 4.0. Based on LibriVox public domain recordings.",
+        size_str="100–460 hours",
+        notes="Large-scale clean read speech, standard ASR/SE corpus",
+        archive_format="tar.gz",
+    ),
+    "dns5_clean": DatasetEntry(
+        id="dns5_clean",
+        name="Microsoft DNS Challenge 5 — clean_fullband",
+        category="clean_speech",
+        official_url="https://github.com/microsoft/DNS-Challenge",
+        download_urls=[
+            "https://raw.githubusercontent.com/microsoft/DNS-Challenge/master/download-dns-challenge-5-headset-training.sh",
+        ],
+        citation="Dubey et al., 'ICASSP 2023 Deep Noise Suppression Challenge', ICASSP 2023.",
+        license_type="CC BY-NC 4.0",
+        terms_notice="Creative Commons Attribution-NonCommercial 4.0. Clean headset speech.",
+        size_str="up to 827 GB (subsample)",
+        notes="Very large multi-language clean speech pool; also ships noise + real room impulse responses in the same repo (download-dns-challenge-5-headset-training.sh)",
+        archive_format=None,
     ),
     "demand_noise": DatasetEntry(
         id="demand_noise",
-        name="DEMAND Multichannel Environmental Noise Corpus",
+        name="DEMAND",
         category="noise_environmental",
         official_url="https://doi.org/10.5281/zenodo.1227121",
         download_urls=[
@@ -84,63 +133,43 @@ DATASET_REGISTRY: Dict[str, DatasetEntry] = {
         citation="Thiemann et al., 'Diverse Environments Multi-channel Acoustic Noise Database', Proc. Meetings on Acoustics 2013.",
         license_type="CC BY-SA 3.0",
         terms_notice="Creative Commons Attribution-ShareAlike 3.0. Attribution required.",
+        size_str="18 real-world noise environments (domestic, office, public, transport, street, nature)",
+        notes="Paired with VoiceBank in the standard benchmark",
         archive_format="zip",
-    ),
-    "vctk": DatasetEntry(
-        id="vctk",
-        name="CSTR VCTK Corpus",
-        category="clean_speech",
-        official_url="https://datashare.ed.ac.uk/handle/10283/3443",
-        download_urls=[
-            "https://datashare.ed.ac.uk/download/DS_10283_3443.zip",
-        ],
-        citation="Yamagishi et al., 'CSTR VCTK Corpus: English Multi-speaker Speech Corpus for CSTR Voice Cloning Toolkit', 2019.",
-        license_type="Open Data Commons Attribution License (ODC-By) v1.0",
-        terms_notice="Attribution to CSTR, University of Edinburgh required.",
-        archive_format="zip",
-    ),
-    "librispeech": DatasetEntry(
-        id="librispeech",
-        name="LibriSpeech (train-clean-100)",
-        category="clean_speech",
-        official_url="https://www.openslr.org/12/",
-        download_urls=[
-            "https://www.openslr.org/resources/12/train-clean-100.tar.gz",
-        ],
-        citation="Panayotov et al., 'Librispeech: an ASR corpus based on public domain audio books', ICASSP 2015.",
-        license_type="CC BY 4.0",
-        terms_notice="Creative Commons Attribution 4.0. Based on LibriVox public domain recordings.",
-        archive_format="tar.gz",
     ),
     "musan": DatasetEntry(
         id="musan",
-        name="MUSAN: Music, Speech, and Noise",
+        name="MUSAN",
         category="noise_mixed",
-        official_url="https://www.openslr.org/17/",
+        official_url="https://www.openslr.org/17",
         download_urls=[
             "https://www.openslr.org/resources/17/musan.tar.gz",
         ],
         citation="Snyder et al., 'MUSAN: A Music, Speech, and Noise Corpus', arXiv:1510.08484, 2015.",
         license_type="Creative Commons 0 / Public Domain",
         terms_notice="CC0 public domain dedication.",
+        size_str="Music, Speech, Noise — ~109 hours",
+        notes="Widely used for augmentation",
         archive_format="tar.gz",
     ),
-    "rirs_noises": DatasetEntry(
-        id="rirs_noises",
-        name="OpenSLR 28: Simulated and Real Room Impulse Responses",
-        category="rir",
-        official_url="https://www.openslr.org/28/",
+    "dns5_noise": DatasetEntry(
+        id="dns5_noise",
+        name="DNS Challenge 5 — noise_fullband",
+        category="noise_environmental",
+        official_url="https://github.com/microsoft/DNS-Challenge",
         download_urls=[
-            "https://www.openslr.org/resources/28/rirs_noises.zip",
+            "https://raw.githubusercontent.com/microsoft/DNS-Challenge/master/download-dns-challenge-5.sh",
         ],
-        citation="Ko et al., 'A study on data augmentation of reverberant speech for robust speech recognition', ICASSP 2017.",
-        license_type="Apache 2.0",
-        terms_notice="Apache License 2.0. Free commercial/non-commercial use with notice.",
-        archive_format="zip",
+        citation="Dubey et al., 'ICASSP 2023 Deep Noise Suppression Challenge', ICASSP 2023.",
+        license_type="CC BY-NC 4.0",
+        terms_notice="Creative Commons Attribution-NonCommercial 4.0. Noise fullband subset.",
+        size_str="58 GB, sourced from AudioSet + Freesound",
+        notes="Huge diversity of real-world noise classes",
+        archive_format=None,
     ),
     "fsd50k": DatasetEntry(
         id="fsd50k",
-        name="FSD50K: Everyday Sound Events",
+        name="FSD50K",
         category="noise_events",
         official_url="https://zenodo.org/records/4060432",
         download_urls=[
@@ -152,11 +181,13 @@ DATASET_REGISTRY: Dict[str, DatasetEntry] = {
         citation="Fonseca et al., 'FSD50K: an Open Dataset of Everyday Sounds with Freesound', IEEE/ACM TASLP 2022.",
         license_type="CC BY 4.0 / Freesound Licenses",
         terms_notice="Audio clips under various CC licenses. Metadata under CC BY 4.0.",
+        size_str="51,197 clips, 200 sound-event classes (AudioSet ontology)",
+        notes="If you want a literal '200 classes' number for your report, this is it",
         archive_format="zip",
     ),
     "esc50": DatasetEntry(
         id="esc50",
-        name="ESC-50: Environmental Sound Classification",
+        name="ESC-50",
         category="noise_environmental",
         official_url="https://github.com/karolpiczak/ESC-50",
         download_urls=[
@@ -165,6 +196,8 @@ DATASET_REGISTRY: Dict[str, DatasetEntry] = {
         citation="Piczak, 'ESC: Dataset for Environmental Sound Classification', ACM MM 2015.",
         license_type="CC BY-NC 3.0",
         terms_notice="Creative Commons Attribution-NonCommercial 3.0. Non-commercial research only.",
+        size_str="2,000 clips, 50 environmental classes",
+        notes="Small, clean-labeled, good for the impulse-detector training set (glass break, gunshot, clapping, etc. are in here)",
         archive_format="zip",
     ),
     "urbansound8k": DatasetEntry(
@@ -178,6 +211,8 @@ DATASET_REGISTRY: Dict[str, DatasetEntry] = {
         citation="Salamon et al., 'A Dataset and Taxonomy for Urban Sound Research', ACM MM 2014.",
         license_type="CC BY-NC 3.0",
         terms_notice="MANDATORY: UrbanSound8K terms of use require accepting academic research terms at https://urbansounddataset.weebly.com/urbansound8k.html. Explicit consent required via --accept-urbansound8k-terms.",
+        size_str="8,732 clips, 10 urban classes",
+        notes="Sirens, drilling, engine idling — good defence/urban noise coverage",
         requires_consent=True,
         archive_format="tar.gz",
     ),
@@ -193,20 +228,53 @@ DATASET_REGISTRY: Dict[str, DatasetEntry] = {
         citation="Mesaros et al., 'Acoustic Scene Classification in DCASE 2020 Challenge', DCASE 2020.",
         license_type="CC BY 4.0",
         terms_notice="Creative Commons Attribution 4.0. Attribution required.",
+        size_str="10 acoustic scenes, ~40 hours",
+        notes="Airport, metro, park, street — background-scene diversity",
         archive_format="zip",
+    ),
+    "rirs_noises": DatasetEntry(
+        id="rirs_noises",
+        name="RIRS_NOISES (OpenSLR 28)",
+        category="rir",
+        official_url="https://www.openslr.org/28",
+        download_urls=[
+            "https://www.openslr.org/resources/28/rirs_noises.zip",
+        ],
+        citation="Ko et al., 'A study on data augmentation of reverberant speech for robust speech recognition', ICASSP 2017.",
+        license_type="Apache 2.0",
+        terms_notice="Apache License 2.0. Free commercial/non-commercial use with notice.",
+        size_str="Simulated + real RIRs",
+        notes="Simulated + real RIRs, standard for reverb augmentation",
+        archive_format="zip",
+    ),
+    "dns5_rir": DatasetEntry(
+        id="dns5_rir",
+        name="DNS Challenge 5 — impulse_responses",
+        category="rir",
+        official_url="https://github.com/microsoft/DNS-Challenge",
+        download_urls=[
+            "https://raw.githubusercontent.com/microsoft/DNS-Challenge/master/download-dns-challenge-5.sh",
+        ],
+        citation="Dubey et al., 'ICASSP 2023 Deep Noise Suppression Challenge', ICASSP 2023.",
+        license_type="CC BY-NC 4.0",
+        terms_notice="Creative Commons Attribution-NonCommercial 4.0. Impulse responses.",
+        size_str="5.9 GB",
+        notes="Same repo as above, 5.9 GB",
+        archive_format=None,
     ),
     "dns5": DatasetEntry(
         id="dns5",
-        name="Microsoft DNS Challenge 5 (Noise & RIR Subset)",
+        name="Microsoft DNS Challenge 5 (Comprehensive)",
         category="speech_noise_rir",
         official_url="https://github.com/microsoft/DNS-Challenge",
         download_urls=[
-            # Official repo direct download script reference
             "https://raw.githubusercontent.com/microsoft/DNS-Challenge/master/download-dns-challenge-5.sh",
         ],
         citation="Dubey et al., 'ICASSP 2023 Deep Noise Suppression Challenge', ICASSP 2023.",
         license_type="CC BY-NC 4.0",
         terms_notice="Creative Commons Attribution-NonCommercial 4.0. Full corpus is 827GB; script downloads targeted noise and RIR subsets.",
+        size_str="Clean (up to 827GB), Noise (58GB), RIR (5.9GB)",
+        notes="Very large multi-language clean speech pool; also ships noise + real room impulse responses in the same repo",
         archive_format=None,
     ),
 }
@@ -420,15 +488,26 @@ def download_dataset(
 
 
 def list_registered_datasets():
-    """Prints a formatted inventory of all registered research datasets."""
-    print("==========================================================================")
-    print("       SIH26052 NOICELESSX — Official Research Dataset Catalog           ")
-    print("==========================================================================")
-    print(f"{'ID':<18} | {'Name':<32} | {'Category':<18} | {'License':<15}")
-    print("-" * 88)
-    for entry in DATASET_REGISTRY.values():
-        print(f"{entry.id:<18} | {entry.name[:32]:<32} | {entry.category:<18} | {entry.license_type[:15]:<15}")
-    print("==========================================================================\n")
+    """Prints a formatted inventory of all registered research datasets categorized by Clean Speech, Noise, and RIRs."""
+    print("\n==========================================================================================================")
+    print("                    SIH26052 NOICELESSX — Official Research Dataset Catalog                              ")
+    print("==========================================================================================================")
+
+    categories = [
+        ("Clean speech (the 's[n]' in your mixing equation)", ["voicebank_clean", "vctk", "librispeech", "dns5_clean"]),
+        ("Noise (the 'v[n]' term)", ["demand_noise", "musan", "dns5_noise", "fsd50k", "esc50", "urbansound8k", "tau2020"]),
+        ("Room impulse responses (the 'h_s, h_v' convolution terms)", ["rirs_noises", "dns5_rir"]),
+    ]
+
+    for cat_title, entry_keys in categories:
+        print(f"\n### {cat_title}")
+        print(f"{'Dataset':<38} | {'Size':<28} | {'Source / Official URL':<46} | {'Notes'}")
+        print("-" * 140)
+        for key in entry_keys:
+            if key in DATASET_REGISTRY:
+                entry = DATASET_REGISTRY[key]
+                print(f"{entry.name:<38} | {entry.size_str:<28} | {entry.official_url:<46} | {entry.notes}")
+    print("\n==========================================================================================================\n")
 
 
 def main():

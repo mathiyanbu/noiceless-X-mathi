@@ -65,6 +65,68 @@ def temp_audio_dir(tmp_path):
 
 
 def test_sources_registry_and_ontology():
+    from ai.datasets.sources import CLEAN_SPEECH_DATASETS, NOISE_DATASETS, RIR_DATASETS
+    from ai.datasets.download_datasets import DATASET_REGISTRY
+
+    # 1. Clean speech datasets
+    assert "voicebank" in CLEAN_SPEECH_DATASETS
+    assert "https://datashare.ed.ac.uk/handle/10283/2791" in CLEAN_SPEECH_DATASETS["voicebank"].url
+    assert "11,572" in CLEAN_SPEECH_DATASETS["voicebank"].size
+
+    assert "vctk" in CLEAN_SPEECH_DATASETS
+    assert "https://datashare.ed.ac.uk/handle/10283/3443" in CLEAN_SPEECH_DATASETS["vctk"].url
+    assert "110 speakers" in CLEAN_SPEECH_DATASETS["vctk"].size
+
+    assert "librispeech" in CLEAN_SPEECH_DATASETS
+    assert "https://www.openslr.org/12" in CLEAN_SPEECH_DATASETS["librispeech"].url
+
+    assert "dns5_clean" in CLEAN_SPEECH_DATASETS
+    assert "https://github.com/microsoft/DNS-Challenge" in CLEAN_SPEECH_DATASETS["dns5_clean"].url
+
+    # 2. Noise datasets
+    assert "demand" in NOISE_DATASETS
+    assert "doi.org/10.5281/zenodo.1227121" in NOISE_DATASETS["demand"].url
+    assert "18" in NOISE_DATASETS["demand"].size
+
+    assert "musan" in NOISE_DATASETS
+    assert "https://www.openslr.org/17" in NOISE_DATASETS["musan"].url
+
+    assert "dns5_noise" in NOISE_DATASETS
+    assert "https://github.com/microsoft/DNS-Challenge" in NOISE_DATASETS["dns5_noise"].url
+    assert "58 GB" in NOISE_DATASETS["dns5_noise"].size
+
+    assert "fsd50k" in NOISE_DATASETS
+    assert "zenodo.org/records/4060432" in NOISE_DATASETS["fsd50k"].url
+    assert "200" in NOISE_DATASETS["fsd50k"].size
+
+    assert "esc50" in NOISE_DATASETS
+    assert "github.com/karolpiczak/ESC-50" in NOISE_DATASETS["esc50"].url
+    assert "2,000" in NOISE_DATASETS["esc50"].size
+
+    assert "urbansound8k" in NOISE_DATASETS
+    assert "urbansounddataset.weebly.com/urbansound8k.html" in NOISE_DATASETS["urbansound8k"].url
+    assert "8,732" in NOISE_DATASETS["urbansound8k"].size
+
+    assert "tau2020" in NOISE_DATASETS
+    assert "zenodo.org/records/3819968" in NOISE_DATASETS["tau2020"].url
+    assert "10 acoustic scenes" in NOISE_DATASETS["tau2020"].size
+
+    # 3. Room impulse responses
+    assert "rirs_noises" in RIR_DATASETS
+    assert "https://www.openslr.org/28" in RIR_DATASETS["rirs_noises"].url
+
+    assert "dns5_rirs" in RIR_DATASETS
+    assert "https://github.com/microsoft/DNS-Challenge" in RIR_DATASETS["dns5_rirs"].url
+    assert "5.9 GB" in RIR_DATASETS["dns5_rirs"].size
+
+    # 4. Download registry contains all verified keys
+    for req_key in ["voicebank_clean", "vctk", "librispeech", "dns5_clean", "demand_noise", "musan", "dns5_noise", "fsd50k", "esc50", "urbansound8k", "tau2020", "rirs_noises", "dns5_rir"]:
+        assert req_key in DATASET_REGISTRY, f"Dataset registry missing required entry: {req_key}"
+        assert DATASET_REGISTRY[req_key].official_url != "", f"Missing official URL for {req_key}"
+        assert DATASET_REGISTRY[req_key].size_str != "", f"Missing size description for {req_key}"
+        assert DATASET_REGISTRY[req_key].notes != "", f"Missing notes for {req_key}"
+
+    # 5. Acoustic classes and ontology
     classes = get_all_registered_noise_classes()
     assert len(classes) >= 50
     assert "DKITCHEN" in DEMAND_CLASSES
