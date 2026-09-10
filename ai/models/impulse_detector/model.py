@@ -22,6 +22,7 @@ class TinyImpulseMLP(nn.Module):
     """
     def __init__(self, input_dim: int = 8, hidden_dim: int = 16):
         super().__init__()
+        self.norm = nn.BatchNorm1d(input_dim)
         self.net = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
@@ -38,7 +39,7 @@ class TinyImpulseMLP(nn.Module):
         Returns:
             probability: Tensor of shape (batch, 1) in range [0, 1]
         """
-        return self.net(features)
+        return self.net(self.norm(features))
 
 
 def export_impulse_model_to_onnx(

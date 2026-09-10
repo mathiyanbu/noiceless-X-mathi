@@ -74,24 +74,25 @@ def mock_manifest_corpus(tmp_path):
             })
 
     # Impulses
-    for i in range(1, 3):
-        fpath = impulse / f"gunshot_{i:02d}.wav"
-        sig = np.zeros(int(0.5 * sr), dtype=np.float32)
-        sig[100] = 0.95
-        sig[100:300] = 0.5 * np.exp(-np.linspace(0, 5, 200))
-        sf.write(str(fpath), sig, sr)
-        records.append({
-            "filepath": str(fpath.resolve()),
-            "dataset_source": "esc50",
-            "category": "noise_impulsive",
-            "duration_sec": 0.5,
-            "sample_rate": sr,
-            "class_label": "gun_shot",
-            "split": "train",
-            "speaker_id": None,
-            "channels": 1,
-            "rms_dbfs": -10.0,
-        })
+    for split in ["train", "val", "test"]:
+        for i in range(1, 3):
+            fpath = impulse / f"gunshot_{split}_{i:02d}.wav"
+            sig = np.zeros(int(0.5 * sr), dtype=np.float32)
+            sig[100] = 0.95
+            sig[100:300] = 0.5 * np.exp(-np.linspace(0, 5, 200))
+            sf.write(str(fpath), sig, sr)
+            records.append({
+                "filepath": str(fpath.resolve()),
+                "dataset_source": "esc50",
+                "category": "noise_impulsive",
+                "duration_sec": 0.5,
+                "sample_rate": sr,
+                "class_label": "gun_shot",
+                "split": split,
+                "speaker_id": None,
+                "channels": 1,
+                "rms_dbfs": -10.0,
+            })
 
     # RIRs
     fpath = rirs / "test_rir.wav"

@@ -237,6 +237,7 @@ class SpeechEnhancementDataset(Dataset):
                 "measured_snr": float(mix_result.measured_snr_db),
                 "clean_speaker": mix_result.metadata.get("speaker_id", "unknown"),
                 "noise_class": mix_result.metadata.get("noise_class", "unknown"),
+                "noise_bucket": mix_result.metadata.get("noise_bucket", "stationary"),
                 "has_reverb": bool(mix_result.has_reverb),
                 "has_impulse": bool(mix_result.has_impulse),
                 "is_clipped": bool(mix_result.is_clipped),
@@ -285,6 +286,7 @@ class SpeechEnhancementDataset(Dataset):
             "measured_snr": float(target_snr),
             "clean_speaker": clean_rec.speaker_id or "unknown",
             "noise_class": noise_rec.class_name,
+            "noise_bucket": "stationary",
             "has_reverb": bool(clean_rir is not None),
             "has_impulse": False,
             "is_clipped": False,
@@ -294,18 +296,24 @@ class SpeechEnhancementDataset(Dataset):
 ManifestMixtureDataset = SpeechEnhancementDataset
 
 
-def collate_speech_batch(batch: List[Dict[str, Any]]) -> Dict[str, torch.Tensor]:
-    """Collates a batch of audio samples into batched PyTorch tensors."""
+def collate_speech_batch(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Collates a batch of audio samples into batched PyTorch tensors with condition metadata."""
     noisy_stfts = torch.stack([item["noisy_stft"] for item in batch], dim=0)
     clean_stfts = torch.stack([item["clean_stft"] for item in batch], dim=0)
     noisy_wavs = torch.stack([item["noisy_wav"] for item in batch], dim=0)
     clean_wavs = torch.stack([item["clean_wav"] for item in batch], dim=0)
     snrs = torch.tensor([item.get("target_snr", 0.0) for item in batch], dtype=torch.float32)
+    has_reverbs = torch.tensor([bool(item.get("has_reverb", False)) for item in batch], dtype=torch.bool)
+    has_impulses = torch.tensor([bool(item.get("has_impulse", False)) for item in batch], dtype=torch.bool)
+    noise_buckets = [str(item.get("noise_bucket", "stationary")) for item in batch]
 
     return {
-        "noisy_stft": noisy_stfts,  # (B, 2, T, 257)
-        "clean_stft": clean_stfts,  # (B, 2, T, 257)
-        "noisy_wav": noisy_wavs,    # (B, samples)
-        "clean_wav": clean_wavs,    # (B, samples)
-        "snr": snrs,
+        "noisy_stft": noisy_stfts,       # (B, 2, T, 257)
+        "clean_stft": clean_stfts,       # (B, 2, T, 257)
+        "noisy_wav": noisy_wavs,         # (B, samples)
+        "clean_wav": clean_wavs,         # (B, samples)
+        "snr": snrs,                     # (B,)
+        "has_reverb": has_reverbs,       # (B,)
+        "has_impulse": has_impulses,     # (B,)
+        "noise_bucket": noise_buckets,   # List[str] of len B
     }

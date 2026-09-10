@@ -13,7 +13,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import soundfile as sf
@@ -29,6 +29,9 @@ if str(REPO_ROOT) not in sys.path:
 
 from ai.models.impulse_detector.features import extract_impulse_features
 from ai.models.impulse_detector.model import TinyImpulseMLP, export_impulse_model_to_onnx
+
+
+from ai.preprocessing.mixer import classify_noise_into_bucket
 
 
 def extract_features_from_audio_file(
@@ -69,78 +72,107 @@ def extract_features_from_audio_file(
 def build_real_feature_dataset(
     manifest_path: Path,
     max_samples_per_class: int = 2000,
-    split: str = "train",
+    split: str = "all",
     seed: int = 42,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray, Dict[str, Any]]:
     """
     Loads real audio files from manifest, extracting 8-D feature vectors:
-    - Positive Class (1.0): real audio from 'noise_impulsive' (gunshot, glass break, door slam, clap, etc.)
-    - Negative Class (0.0): real audio from 'clean_speech' and 'noise_stationary' / 'noise_nonstationary'
+    - Positive Class (1.0): real audio from 'impulsive' bucket (gunshot, glass break, door slam, bark, clap, etc.)
+    - Negative Class (0.0): real audio from 'stationary' and 'non_stationary' noise buckets.
+    Audits and prints exact class list and clip counts.
     """
     rng = np.random.RandomState(seed)
 
-    impulsive_files: List[Path] = []
-    non_impulsive_files: List[Path] = []
+    impulsive_files: List[Tuple[Path, str]] = []
+    non_impulsive_files: List[Tuple[Path, str]] = []
+    impulsive_classes_found = set()
 
     # Parse manifest CSV or JSON
+    records = []
     if manifest_path.suffix.lower() == ".csv":
         with open(manifest_path, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for r in reader:
-                if split != "all" and r.get("split", "train").lower() != split.lower():
-                    continue
-                fpath = Path(r["filepath"])
-                if fpath.exists():
-                    if r.get("category") == "noise_impulsive":
-                        impulsive_files.append(fpath)
-                    else:
-                        non_impulsive_files.append(fpath)
+            records = list(csv.DictReader(f))
     else:
         with open(manifest_path, "r", encoding="utf-8") as f:
             records = json.load(f)
-            for r in records:
-                if split != "all" and r.get("split", "train").lower() != split.lower():
-                    continue
-                fpath = Path(r["filepath"])
-                if fpath.exists():
-                    if r.get("category") == "noise_impulsive":
-                        impulsive_files.append(fpath)
-                    else:
-                        non_impulsive_files.append(fpath)
 
-    print(f"Loaded manifest: {len(impulsive_files)} impulsive audio files, {len(non_impulsive_files)} non-impulsive audio files.")
+    for r in records:
+        if split != "all" and r.get("split", "train").lower() != split.lower():
+            continue
+        fpath = Path(r["filepath"])
+        if not fpath.exists():
+            continue
 
-    # 1. Extract Impulsive Features (Class 1)
+        label = str(r.get("class_label", "unknown"))
+        bucket = classify_noise_into_bucket(r)
+        if bucket == "impulsive":
+            impulsive_files.append((fpath, label))
+            impulsive_classes_found.add(label)
+        elif bucket in {"stationary", "non_stationary"}:
+            non_impulsive_files.append((fpath, label))
+
+    # Audit printout
+    audited_classes = sorted(list(impulsive_classes_found))
+    print("\n==========================================================================")
+    print("      SIH26052 NOICELESSX — Impulse Detector Real Audio Dataset Audit      ")
+    print("==========================================================================")
+    print(f"Manifest source:          {manifest_path} (Split: {split})")
+    print(f"Impulsive audio clips:    {len(impulsive_files)} clips across {len(audited_classes)} verified classes")
+    print(f"Non-impulsive clips:      {len(non_impulsive_files)} clips (stationary/non-stationary noise)")
+    print(f"Audited Impulsive Classes: {audited_classes}")
+    print("--------------------------------------------------------------------------")
+
+    # 1. Extract Impulsive Features (Class 1) across all impulsive files
     pos_features: List[np.ndarray] = []
     rng.shuffle(impulsive_files)
-    for f in impulsive_files:
-        feats = extract_features_from_audio_file(f)
-        pos_features.extend(feats)
+    max_per_pos_file = max(5, int(np.ceil(max_samples_per_class / max(1, len(impulsive_files)))))
+    for f, _ in impulsive_files:
+        file_feats = extract_features_from_audio_file(f)
+        if not file_feats:
+            continue
+        arr_feats = np.array(file_feats)
+        # Select peak transient/onset frames (highest crest factor & spectral flux onset)
+        scores = arr_feats[:, 2] * np.log1p(np.maximum(0.0, arr_feats[:, 1]))
+        n_take = min(len(arr_feats), max_per_pos_file)
+        top_idx = np.argsort(scores)[-n_take:]
+        pos_features.extend(arr_feats[top_idx])
         if len(pos_features) >= max_samples_per_class:
             break
-
     pos_features = pos_features[:max_samples_per_class]
 
-    # 2. Extract Non-Impulsive Features (Class 0)
+    # 2. Extract Non-Impulsive Features (Class 0) across non-impulsive files
     neg_features: List[np.ndarray] = []
     rng.shuffle(non_impulsive_files)
-    for f in non_impulsive_files:
-        feats = extract_features_from_audio_file(f)
-        neg_features.extend(feats)
+    max_per_neg_file = max(5, int(np.ceil(max_samples_per_class / max(1, len(non_impulsive_files)))))
+    for f, _ in non_impulsive_files:
+        file_feats = extract_features_from_audio_file(f)
+        if not file_feats:
+            continue
+        arr_feats = np.array(file_feats)
+        n_take = min(len(arr_feats), max_per_neg_file)
+        sample_idx = rng.choice(len(arr_feats), size=n_take, replace=False)
+        neg_features.extend(arr_feats[sample_idx])
         if len(neg_features) >= max_samples_per_class:
             break
-
     neg_features = neg_features[:max_samples_per_class]
 
     print(f"Extracted {len(pos_features)} real impulsive feature vectors (Class 1).")
     print(f"Extracted {len(neg_features)} real non-impulsive feature vectors (Class 0).")
+    print("==========================================================================\n")
 
     X = np.vstack([pos_features, neg_features]).astype(np.float32)
     y = np.concatenate([np.ones(len(pos_features)), np.zeros(len(neg_features))]).astype(np.float32).reshape(-1, 1)
 
     # Shuffle
     indices = rng.permutation(len(X))
-    return X[indices], y[indices]
+    meta = {
+        "num_pos_files": len(impulsive_files),
+        "num_neg_files": len(non_impulsive_files),
+        "audited_classes": audited_classes,
+        "num_pos_frames": len(pos_features),
+        "num_neg_frames": len(neg_features),
+    }
+    return X[indices], y[indices], meta
 
 
 def train_impulse_detector_model(
@@ -152,16 +184,17 @@ def train_impulse_detector_model(
     val_ratio: float = 0.20,
     seed: int = 42,
     verbose: bool = True,
-) -> Tuple[TinyImpulseMLP, Dict[str, float]]:
+) -> Tuple[TinyImpulseMLP, Dict[str, Any]]:
     """
     Trains TinyImpulseMLP on real 8-D acoustic features and exports to ONNX.
+    Reports precision, recall, F1, and 2x2 confusion matrix on held-out split.
     """
     if verbose:
         print("==========================================================================")
         print("       SIH26052 NOICELESSX — Real Feature Impulse Detector Training       ")
         print("==========================================================================")
 
-    X, y = build_real_feature_dataset(
+    X, y, meta = build_real_feature_dataset(
         manifest_path=Path(manifest_path),
         max_samples_per_class=max_samples,
         split="all",
@@ -220,10 +253,12 @@ def train_impulse_detector_model(
         if verbose and (epoch % 5 == 0 or epoch == epochs):
             print(f"  Epoch {epoch:02d}/{epochs:02d} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | Val Acc: {accuracy * 100:.1f}%")
 
-    # Final Metrics
-    tp = np.sum((preds_bin == 1) & (targets_bin == 1))
-    fp = np.sum((preds_bin == 1) & (targets_bin == 0))
-    fn = np.sum((preds_bin == 0) & (targets_bin == 1))
+    # 2x2 Confusion Matrix Computation on Held-Out Split
+    tp = int(np.sum((preds_bin == 1) & (targets_bin == 1)))
+    fp = int(np.sum((preds_bin == 1) & (targets_bin == 0)))
+    fn = int(np.sum((preds_bin == 0) & (targets_bin == 1)))
+    tn = int(np.sum((preds_bin == 0) & (targets_bin == 0)))
+
     precision = float(tp / (tp + fp + 1e-7))
     recall = float(tp / (tp + fn + 1e-7))
     f1 = float(2 * (precision * recall) / (precision + recall + 1e-7))
@@ -234,19 +269,34 @@ def train_impulse_detector_model(
         "precision": precision,
         "recall": recall,
         "f1_score": f1,
+        "confusion_matrix": {
+            "TP": tp,
+            "FP": fp,
+            "FN": fn,
+            "TN": tn,
+        },
+        "dataset_metadata": meta,
     }
 
     if verbose:
-        print("\nFinal Real-Audio Validation Report:")
-        print(f"  Accuracy:  {accuracy * 100:.2f}%")
-        print(f"  Precision: {precision * 100:.2f}%")
-        print(f"  Recall:    {recall * 100:.2f}%")
-        print(f"  F1-Score:  {f1:.4f}")
+        print("\n==========================================================================")
+        print("    SIH26052 NOICELESSX — Held-Out Split Impulse Evaluation & Confusion   ")
+        print("==========================================================================")
+        print(f"  Accuracy:         {accuracy * 100:.2f}%")
+        print(f"  Precision:        {precision * 100:.2f}%")
+        print(f"  Recall:           {recall * 100:.2f}%")
+        print(f"  F1-Score:         {f1:.4f}")
+        print("--------------------------------------------------------------------------")
+        print("  Confusion Matrix (2x2):")
+        print(f"                    Predicted Negative    Predicted Positive")
+        print(f"    Actual Negative   TN = {tn:<8d}       FP = {fp:<8d}")
+        print(f"    Actual Positive   FN = {fn:<8d}       TP = {tp:<8d}")
+        print("==========================================================================\n")
 
     # Export to ONNX
     if output_onnx:
         if verbose:
-            print(f"\nExporting trained impulse detector to ONNX: {output_onnx}")
+            print(f"Exporting trained impulse detector to ONNX: {output_onnx}")
         export_impulse_model_to_onnx(model, output_path=output_onnx)
 
     return model, metrics

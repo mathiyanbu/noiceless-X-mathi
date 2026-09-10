@@ -24,7 +24,7 @@ import random
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
 import soundfile as sf
@@ -64,7 +64,7 @@ class AudioMixer:
         snr_range_db: Tuple[float, float] = (-5.0, 15.0),
         rir_prob: float = 0.40,
         impulse_prob: float = 0.15,
-        clipping_prob: float = 0.10,
+        clipping_prob: float = 0.05,
         gain_variation_db: Tuple[float, float] = (-6.0, 3.0),
         sensor_noise_floor_dbfs: float = -60.0,
         enable_time_varying_gain: bool = False,
@@ -254,10 +254,62 @@ class AudioMixer:
         )
 
 
+DEFAULT_BUCKET_WEIGHTS: Dict[str, float] = {
+    "stationary": 0.35,
+    "non_stationary": 0.35,
+    "impulsive": 0.15,
+    "urban_transport": 0.15,
+}
+
+IMPULSIVE_FILTER_CLASSES: Set[str] = {
+    "gunshot", "gun_shot", "gun", "glass_breaking", "glass_break", "glass",
+    "door_slam", "door_wood_knock", "slam", "bark", "dog_bark", "dog",
+    "clap", "clapping", "applause", "siren_onset", "explosion", "fireworks",
+    "knock", "tap", "finger_snapping", "slap_smack", "coin_drop"
+}
+
+URBAN_TRANSPORT_CLASSES: Set[str] = {
+    "siren", "drilling", "engine_idling", "jackhammer", "car_horn"
+}
+
+
+def classify_noise_into_bucket(record: Dict[str, Any]) -> str:
+    """
+    Classifies a noise recording into one of 4 disjoint buckets:
+      - urban_transport: UrbanSound8K (siren, drilling, engine_idling, jackhammer, car_horn)
+      - impulsive: FSD50K + ESC-50 clips filtered to impulsive classes
+      - stationary: DEMAND indoor environments (kitchen, office, etc.) or steady-state noise
+      - non_stationary: MUSAN noise + DNS noise_fullband + TAU Urban Acoustic Scenes
+    """
+    source = str(record.get("dataset_source", "")).lower()
+    cat = str(record.get("category", "")).lower()
+    label = str(record.get("class_label", "")).lower().strip().replace(" ", "_").replace("-", "_")
+
+    # 1. urban_transport
+    if source == "urbansound8k" or any(k in label for k in URBAN_TRANSPORT_CLASSES):
+        return "urban_transport"
+
+    # 2. impulsive
+    if (source in {"fsd50k", "esc50"} and any(k in label for k in IMPULSIVE_FILTER_CLASSES)) or cat == "noise_impulsive":
+        return "impulsive"
+
+    # 3. stationary
+    if (
+        source == "demand"
+        or cat == "noise_stationary"
+        or label in {"dkitchen", "dwashing", "dliving", "ooffice", "air_conditioner", "vacuum_cleaner", "washing_machine", "fan", "hvac", "hum"}
+    ):
+        return "stationary"
+
+    # 4. non_stationary (default)
+    return "non_stationary"
+
+
 class ManifestAudioMixer:
     """
     Manages loading real audio from manifest files, enforcing strict split disjointness,
-    and generating training pairs.
+    partitioning noise into 4 balanced exposure buckets (stationary, non_stationary,
+    impulsive, urban_transport), and generating training pairs.
     """
 
     def __init__(
@@ -267,25 +319,39 @@ class ManifestAudioMixer:
         sample_rate: int = 16000,
         segment_duration_sec: float = 2.0,
         mixer: Optional[AudioMixer] = None,
+        bucket_weights: Optional[Dict[str, float]] = None,
         seed: int = 42,
+        verbose: bool = False,
     ):
         self.manifest_path = Path(manifest_path)
         self.split = split.lower()
         self.sr = sample_rate
         self.segment_samples = int(segment_duration_sec * sample_rate)
         self.mixer = mixer or AudioMixer(sample_rate=sample_rate)
+        self.bucket_weights = bucket_weights or dict(DEFAULT_BUCKET_WEIGHTS)
         self.seed = seed
         self.rng = random.Random(seed)
+        self.verbose = verbose
 
         self.clean_records: List[Dict[str, Any]] = []
         self.noise_records: List[Dict[str, Any]] = []
         self.impulse_records: List[Dict[str, Any]] = []
         self.rir_records: List[Dict[str, Any]] = []
 
+        # 4 Disjoint Noise Buckets
+        self.noise_buckets: Dict[str, List[Dict[str, Any]]] = {
+            "stationary": [],
+            "non_stationary": [],
+            "impulsive": [],
+            "urban_transport": [],
+        }
+
         self._load_and_filter_manifest()
+        if self.verbose:
+            self._print_audit_report()
 
     def _load_and_filter_manifest(self):
-        """Loads manifest CSV or JSON and filters strictly by split."""
+        """Loads manifest CSV or JSON, filters by split, and classifies noise into buckets."""
         if not self.manifest_path.exists():
             raise FileNotFoundError(f"Manifest file not found: {self.manifest_path}")
 
@@ -311,37 +377,74 @@ class ManifestAudioMixer:
 
             if cat == "clean_speech":
                 self.clean_records.append(r)
-            elif cat == "noise_impulsive":
-                self.impulse_records.append(r)
-            elif cat in {"noise_stationary", "noise_nonstationary"}:
-                self.noise_records.append(r)
             elif cat == "rir":
                 self.rir_records.append(r)
+            else:
+                # Noise category or general noise record
+                bucket = classify_noise_into_bucket(r)
+                self.noise_buckets[bucket].append(r)
+                self.noise_records.append(r)
+
+                if bucket == "impulsive" or cat == "noise_impulsive":
+                    self.impulse_records.append(r)
 
         if not self.clean_records:
             raise ValueError(f"No clean speech records found for split '{self.split}' in {self.manifest_path}")
         if not self.noise_records:
             raise ValueError(f"No noise records found for split '{self.split}' in {self.manifest_path}")
 
+    def _print_audit_report(self):
+        """Prints auditable noise bucket counts and impulsive classes."""
+        impulsive_labels = sorted(list({r.get("class_label", "") for r in self.noise_buckets["impulsive"]}))
+        print(f"\n[ManifestAudioMixer Audit — Split: {self.split.upper()}]")
+        print(f"  Clean Speech utterances:  {len(self.clean_records)}")
+        print(f"  Stationary Noise clips:   {len(self.noise_buckets['stationary'])}")
+        print(f"  Non-Stationary clips:     {len(self.noise_buckets['non_stationary'])}")
+        print(f"  Urban Transport clips:    {len(self.noise_buckets['urban_transport'])}")
+        print(f"  Impulsive Noise clips:    {len(self.noise_buckets['impulsive'])} ({len(impulsive_labels)} auditable classes)")
+        print(f"    Audited Impulsive Classes: {impulsive_labels}")
+        print(f"  RIR Room Responses:       {len(self.rir_records)}\n")
+
     def _load_audio_segment(self, filepath: str) -> np.ndarray:
         """Loads audio file and returns 16kHz mono float32 segment."""
         data, sr = sf.read(filepath, dtype="float32", always_2d=True)
-        # Convert to mono
         mono = np.mean(data, axis=1) if data.shape[1] > 1 else data[:, 0]
 
-        # Resample if needed
         if sr != self.sr:
             from scipy.signal import resample
             num_samples = int(round(len(mono) * self.sr / sr))
             mono = resample(mono, num_samples).astype(np.float32)
 
-        # Extract fixed-length segment
         if len(mono) >= self.segment_samples:
             start = self.rng.randint(0, len(mono) - self.segment_samples)
             return mono[start : start + self.segment_samples].astype(np.float32)
         else:
             repeats = int(math.ceil(self.segment_samples / len(mono)))
             return np.tile(mono, repeats)[:self.segment_samples].astype(np.float32)
+
+    def sample_noise_record(self) -> Tuple[Dict[str, Any], str]:
+        """
+        Samples a noise record using balanced probabilities across available buckets.
+        Returns: (record_dict, bucket_name)
+        """
+        # Find buckets with at least one record
+        available_buckets = [b for b, recs in self.noise_buckets.items() if len(recs) > 0]
+        if not available_buckets:
+            # Fallback to all noise records
+            rec = self.rng.choice(self.noise_records)
+            return rec, rec.get("category", "noise")
+
+        # Normalize weights for available buckets
+        weights = [self.bucket_weights.get(b, 0.25) for b in available_buckets]
+        total_w = sum(weights)
+        if total_w <= 0:
+            probs = [1.0 / len(available_buckets)] * len(available_buckets)
+        else:
+            probs = [w / total_w for w in weights]
+
+        chosen_bucket = self.rng.choices(available_buckets, weights=probs, k=1)[0]
+        rec = self.rng.choice(self.noise_buckets[chosen_bucket])
+        return rec, chosen_bucket
 
     def generate_mixture(
         self,
@@ -354,7 +457,7 @@ class ManifestAudioMixer:
         Samples real audio records from the active split and synthesizes a mixture.
         """
         clean_rec = self.rng.choice(self.clean_records)
-        noise_rec = self.rng.choice(self.noise_records)
+        noise_rec, chosen_bucket = self.sample_noise_record()
 
         clean_audio = self._load_audio_segment(clean_rec["filepath"])
         noise_audio = self._load_audio_segment(noise_rec["filepath"])
@@ -396,10 +499,14 @@ class ManifestAudioMixer:
             "noise_file": noise_rec["filepath"],
             "noise_class": noise_rec.get("class_label", "unknown"),
             "noise_source": noise_rec.get("dataset_source", "unknown"),
+            "noise_bucket": chosen_bucket,
             "split": self.split,
+            "has_reverb": bool(result.has_reverb),
+            "has_impulse": bool(result.has_impulse),
             "impulse_file": impulse_rec["filepath"] if (result.has_impulse and impulse_rec) else None,
             "impulse_label": impulse_rec.get("class_label") if (result.has_impulse and impulse_rec) else None,
         }
+        return result
         return result
 
     def generate_batch(self, count: int) -> List[MixtureResult]:

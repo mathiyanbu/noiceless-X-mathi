@@ -1,12 +1,12 @@
 {
   "num_test_samples": 10,
-  "mean_snr_in_db": 3.8438388925518865,
-  "mean_snr_out_db": -1.2189582707896327,
-  "mean_delta_snr_db": -5.062797163341519,
-  "mean_sisnr_in_db": 4.605537503357189,
-  "mean_sisnr_out_db": -0.15553336085305164,
-  "mean_delta_sisnr_db": -4.761070864210241,
-  "mean_stoi": 0.6235953074941166,
+  "mean_snr_in_db": 6.660541971717338,
+  "mean_snr_out_db": -7.824953680949898,
+  "mean_delta_snr_db": -14.485495652667236,
+  "mean_sisnr_in_db": 6.6799933231428295,
+  "mean_sisnr_out_db": 0.8564328360607897,
+  "mean_delta_sisnr_db": -5.82356048708204,
+  "mean_stoi": 0.6640232546480728,
   "mean_pesq": null,
   "pesq_status": "uncompiled_on_windows_platform"
 }
