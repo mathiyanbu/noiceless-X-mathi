@@ -104,7 +104,7 @@ class AudioMixer:
         # Prevent digital clipping with 0.95 peak headroom
         max_val = np.max(np.abs(mix))
         if max_val > 0.95:
-            norm_factor = 0.95 / max_val
+            norm_factor = 0.949 / max_val
             mix = mix * norm_factor
             clean_processed = clean_processed * norm_factor
             noise_scaled = noise_scaled * norm_factor
